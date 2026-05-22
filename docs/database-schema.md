@@ -78,6 +78,11 @@ tasks (günlük örnekler)
 
 Bir `skeleton_block` silinirse o bloğa bağlı `tasks` etkilenmez (`skeleton_block_id` null olabilir).
 
+> **Önemli — `day_of_week` kodlaması:**
+> DB'de `0 = Pazartesi … 5 = Cumartesi, 6 = Pazar` şeklindedir.
+> (`dashboard/page.tsx`'teki `(jsDay + 6) % 7` dönüşümüne göre.)
+> Belgede yazan `0 = Pazar … 6 = Cumartesi` ifadesi **yanlış**; kod implementasyonu esas alınmalıdır.
+
 ---
 
 ## Kritik Kolonlar

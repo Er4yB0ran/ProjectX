@@ -33,10 +33,14 @@ src/
 │   │   └── signup/page.tsx
 │   ├── (dashboard)/       # Auth gerektiren sayfalar
 │   │   ├── layout.tsx     # Sidebar + auth guard
-│   │   └── dashboard/
-│   │       ├── page.tsx       # Günlük görev listesi (Server Component)
-│   │       ├── actions.ts     # Server Actions (updateTaskStatus, rescheduleTask)
-│   │       └── TaskCard.tsx   # Client Component
+│   │   ├── dashboard/
+│   │   │   ├── page.tsx       # Günlük görev listesi (Server Component)
+│   │   │   ├── actions.ts     # Server Actions (updateTaskStatus, rescheduleTask)
+│   │   │   └── TaskCard.tsx   # Client Component
+│   │   └── template/
+│   │       ├── page.tsx       # Haftalık şablon CRUD sayfası (Server Component)
+│   │       ├── actions.ts     # Server Actions (createTemplateBlock, updateTemplateBlock, deleteTemplateBlock)
+│   │       └── TemplateManager.tsx  # Client Component — modal, form, optimistic UI
 │   ├── api/
 │   │   └── onboarding/route.ts  # AI ile skeleton_block üretimi
 │   ├── auth/
