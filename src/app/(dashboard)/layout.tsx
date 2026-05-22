@@ -41,7 +41,7 @@ export default async function DashboardLayout({
           </li>
           <li>
             <Link
-              href="/skeleton"
+              href="/template"
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors"
             >
               Haftalık Şablon
