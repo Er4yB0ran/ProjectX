@@ -4,6 +4,28 @@ import { useTransition, useOptimistic } from 'react'
 import { updateTaskStatus, rescheduleTask } from './actions'
 import type { Task, TaskStatus } from '@/types/supabase'
 
+/**
+ * Zaman Kilidi (Anti-Cheat) — Görevin başlangıç zamanı henüz gelmediyse `true` döner.
+ *
+ * Kural:
+ *  - `start_time` varsa: `task_date + start_time` (yerel saat) > şu an → kilitli
+ *  - `start_time` yoksa: `task_date` > bugünün tarihi → kilitli
+ *    (Bugünün tarihindeki saat-bilgisiz görevler her zaman erişilebilirdir.)
+ */
+function isTimeLocked(taskDate: string, startTime: string | null): boolean {
+  const now = new Date()
+
+  if (startTime) {
+    // "YYYY-MM-DDTHH:MM:SS" → yerel Date nesnesi
+    const taskStart = new Date(`${taskDate}T${startTime}`)
+    return taskStart > now
+  }
+
+  // Saat bilgisi yoksa yalnızca günü karşılaştır
+  const todayStr = now.toLocaleDateString('sv-SE') // "YYYY-MM-DD" (ISO-like, yerel)
+  return taskDate > todayStr
+}
+
 function cardStyle(status: TaskStatus): string {
   switch (status) {
     case 'completed':
@@ -78,6 +100,9 @@ export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boole
 
   const isCancelled = optimisticStatus === 'cancelled'
 
+  // Zaman Kilidi: görevin başlangıç zamanı henüz gelmediyse butonlar pasif kalır
+  const timeLocked = isTimeLocked(task.task_date, task.start_time)
+
   return (
     <div
       className={`rounded-2xl border backdrop-blur-sm px-4 py-3.5 transition-all duration-300 ${cardStyle(optimisticStatus)}`}
@@ -118,29 +143,42 @@ export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boole
         {/* Sağ: aksiyon butonları */}
         {!isCancelled && (
           <div className="flex items-center gap-1.5 shrink-0">
-            <ActionButton
-              label="Yaptım"
-              onClick={() => handleStatus('completed')}
-              disabled={isPending}
-              active={optimisticStatus === 'completed'}
-              variant="green"
-            />
-            {!isFixed && (
-              <ActionButton
-                label="Erteledim"
-                onClick={handleReschedule}
-                disabled={isPending}
-                active={optimisticStatus === 'rescheduled'}
-                variant="amber"
-              />
+            {timeLocked ? (
+              /* Zaman Kilidi: görevin saati henüz gelmedi */
+              <span
+                title="Bu görevin saati henüz gelmedi"
+                className="text-xs text-gray-300 select-none px-1"
+                aria-label="Görev kilitli — saati bekleniyor"
+              >
+                🔒
+              </span>
+            ) : (
+              <>
+                <ActionButton
+                  label="Yaptım"
+                  onClick={() => handleStatus('completed')}
+                  disabled={isPending}
+                  active={optimisticStatus === 'completed'}
+                  variant="green"
+                />
+                {!isFixed && (
+                  <ActionButton
+                    label="Erteledim"
+                    onClick={handleReschedule}
+                    disabled={isPending}
+                    active={optimisticStatus === 'rescheduled'}
+                    variant="amber"
+                  />
+                )}
+                <ActionButton
+                  label="Olmadı"
+                  onClick={() => handleStatus('cancelled')}
+                  disabled={isPending}
+                  active={false}
+                  variant="red"
+                />
+              </>
             )}
-            <ActionButton
-              label="Olmadı"
-              onClick={() => handleStatus('cancelled')}
-              disabled={isPending}
-              active={false}
-              variant="red"
-            />
           </div>
         )}
       </div>

@@ -87,7 +87,52 @@ MIN_DURATION = 15            // dakika
 
 ## UI Kuralları
 
-### 1. Sabit Görevlerde "Erteledim" Butonu Gizlenir
+### 1. Zaman Kilidi (Anti-Cheat) — Gelecek Görevlerde Butonlar Kilitlenir
+
+**Dosya:** `src/app/(dashboard)/dashboard/TaskCard.tsx` → `isTimeLocked()`
+
+Kullanıcı disiplinini korumak için görevin başlangıç zamanı henüz gelmemişse aksiyon butonları (`Yaptım`, `Erteledim`, `Olmadı`) tamamen gizlenir; yerlerine görünmez bir 🔒 ikonu bırakılır.
+
+#### Kilit Mantığı
+
+```ts
+function isTimeLocked(taskDate: string, startTime: string | null): boolean {
+  const now = new Date()
+
+  if (startTime) {
+    // "YYYY-MM-DDTHH:MM:SS" → yerel Date nesnesi
+    const taskStart = new Date(`${taskDate}T${startTime}`)
+    return taskStart > now          // başlangıç saati geçmediyse kilitli
+  }
+
+  // Saat bilgisi yoksa yalnızca günü karşılaştır
+  const todayStr = now.toLocaleDateString('sv-SE') // "YYYY-MM-DD" (yerel)
+  return taskDate > todayStr        // ileriki günse kilitli, bugünse açık
+}
+```
+
+#### Karar Tablosu
+
+| `start_time` | Karşılaştırma | Sonuç |
+|---|---|---|
+| Var | `task_date + start_time` > şu an | 🔒 Kilitli |
+| Var | `task_date + start_time` ≤ şu an | ✅ Butonlar aktif |
+| Yok | `task_date` > bugün | 🔒 Kilitli |
+| Yok | `task_date` ≤ bugün | ✅ Butonlar aktif |
+
+#### UI Davranışı
+
+- **Kilitliyken:** Butonlar DOM'dan tamamen kaldırılır (render edilmez). Yerlerine `title="Bu görevin saati henüz gelmedi"` nitelikli bir `🔒` span konur. Kullanıcı hiçbir şekilde aksiyonu tetikleyemez.
+- **Kilit açıldığında:** Sayfa yeniden render edildiğinde (`new Date()` güncel değere döner) butonlar otomatik olarak görünür hale gelir.
+- **Tarih kaynağı:** Tüm karşılaştırma **kullanıcının yerel saatine** (`new Date()`, `toLocaleDateString('sv-SE')`) göre yapılır. UTC veya sunucu saatine bağımlılık yoktur.
+
+#### Mimari Karar
+
+Kilit sunucu tarafında değil **istemci tarafında** uygulanır; bu, sayfa yenilenmeden kilit durumunun değişmesine izin verir. Sunucu action'ları (`updateTaskStatus`, `rescheduleTask`) buton render'ı engellediği için çağrılamaz; ancak ek güvenlik için sunucu tarafında da `task_date + start_time` doğrulaması yapılabilir.
+
+---
+
+### 2. Sabit Görevlerde "Erteledim" Butonu Gizlenir
 
 `TaskCard` `isFixed` prop'u alır. `isFixed = true` ise **"Erteledim" butonu DOM'a hiç eklenmez.**
 
@@ -106,7 +151,7 @@ const isFixed = task.skeleton_block_id
 // fixedBlockIds = skeleton_blocks'ta is_hard_constraint === true olanların id seti
 ```
 
-### 2. Ertelenen Görevlerde Şeffaf Döngü İkonu ve Kenarlık
+### 3. Ertelenen Görevlerde Şeffaf Döngü İkonu ve Kenarlık
 
 Status `'rescheduled'` olduğunda:
 
@@ -116,7 +161,7 @@ Status `'rescheduled'` olduğunda:
 
 Bu görsel dil "Bu görev ertelendi, bitti sayılmadı" mesajını baskısız şekilde verir.
 
-### 3. Buton Durumları
+### 4. Buton Durumları
 
 | Buton | Renk | Aktif koşul |
 |-------|------|-------------|
@@ -126,6 +171,6 @@ Bu görsel dil "Bu görev ertelendi, bitti sayılmadı" mesajını baskısız ş
 
 Aktif buton disabled + renkli görünür (tekrar tıklanamaz). Transition sırasında tüm butonlar disabled.
 
-### 4. Optimistik Güncelleme
+### 5. Optimistik Güncelleme
 
 `useOptimistic` ile kullanıcı butona bastığında UI anında güncellenir, Server Action yanıtı beklenmez. Server Action başarısız olursa React state orijinaline döner.
