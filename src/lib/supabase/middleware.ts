@@ -26,20 +26,26 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // getUser() validates JWT against Supabase — do not add logic before this call
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // getUser() validates JWT against Supabase — do not add logic before this call.
+  // try/catch: Supabase erişilemez durumdaysa (proje duraklatıldı, ağ hatası vb.)
+  // middleware çökmeden devam eder; sayfa seviyesindeki auth guard'lar devreye girer.
+  let user: { id: string } | null = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Supabase unreachable — pass through; page-level guards will handle auth
+  }
 
   const pathname = request.nextUrl.pathname
 
-  if (!user && pathname.startsWith('/dashboard')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
+  /** Korumalı rotalar — kullanıcı oturum açmamışsa /login'e yönlenir */
+  const isProtected =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/template') ||
+    pathname.startsWith('/onboarding')
 
-  if (!user && pathname.startsWith('/onboarding')) {
+  if (!user && isProtected) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
