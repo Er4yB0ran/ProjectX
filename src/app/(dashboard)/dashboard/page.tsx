@@ -3,11 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import TaskCard from './TaskCard'
 
 function getTodayIstanbul(): { dateStr: string; dbDayOfWeek: number } {
-  // 'sv' locale produces YYYY-MM-DD natively — safe against UTC/Istanbul midnight drift
   const dateStr = new Intl.DateTimeFormat('sv', { timeZone: 'Europe/Istanbul' }).format(new Date())
   const [y, m, d] = dateStr.split('-').map(Number)
-  const jsDay = new Date(y, m - 1, d).getDay() // 0=Sun … 6=Sat
-  const dbDayOfWeek = (jsDay + 6) % 7          // 0=Mon … 6=Sun
+  const jsDay = new Date(y, m - 1, d).getDay()
+  const dbDayOfWeek = (jsDay + 6) % 7
   return { dateStr, dbDayOfWeek }
 }
 
@@ -38,9 +37,8 @@ export default async function DashboardPage() {
     p_day_of_week: dbDayOfWeek,
   })
 
-  if (error) throw new Error(`Görevler yüklenemedi: ${error.message}`)
+  if (error) throw new Error(`Gorevler yuklenemedi: ${error.message}`)
 
-  // skeleton_blocks'tan is_hard_constraint bilgisini çek (Task tipinde yer almıyor)
   const skeletonBlockIds = (tasks ?? [])
     .map((t) => t.skeleton_block_id)
     .filter(Boolean) as string[]
@@ -64,25 +62,25 @@ export default async function DashboardPage() {
     <div className="max-w-xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800 capitalize">{displayDate}</h2>
-        <p className="text-sm text-gray-400 mt-0.5">{dateStr}</p>
+        <h2 className="text-2xl font-semibold text-white capitalize tracking-tight">{displayDate}</h2>
+        <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white/55 backdrop-blur-sm border border-white/40 rounded-2xl px-4 py-3">
-          <p className="text-2xl font-semibold text-gray-800">{pending.length}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Bekleyen görev</p>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
+          <p className="text-2xl font-semibold text-white tabular-nums">{pending.length}</p>
+          <p className="text-xs text-neutral-400 mt-0.5">Bekleyen gorev</p>
         </div>
-        <div className="bg-white/55 backdrop-blur-sm border border-white/40 rounded-2xl px-4 py-3">
-          <p className="text-2xl font-semibold text-green-600">{completed.length}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Tamamlanan</p>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
+          <p className="text-2xl font-semibold text-green-400 tabular-nums">{completed.length}</p>
+          <p className="text-xs text-neutral-400 mt-0.5">Tamamlanan</p>
         </div>
       </div>
 
       {/* Task list */}
       {tasks && tasks.length > 0 ? (
-        <ul className="space-y-2.5">
+        <ul className="space-y-2">
           {tasks.map((task) => (
             <li key={task.id}>
               <TaskCard
@@ -96,12 +94,12 @@ export default async function DashboardPage() {
           ))}
         </ul>
       ) : (
-        <div className="bg-white/40 backdrop-blur-sm border border-dashed border-gray-300/50 rounded-2xl p-8 text-center">
-          <p className="text-gray-400 text-sm">
-            Bu gün için şablon tanımlı değil.
+        <div className="bg-neutral-900 border border-dashed border-neutral-700 rounded-xl p-8 text-center">
+          <p className="text-neutral-400 text-sm">
+            Bu gun icin sablon tanimli degil.
           </p>
-          <p className="text-gray-300 text-xs mt-1">
-            Haftalık şablonunu oluşturmak için Haftalık Şablon sayfasını ziyaret et.
+          <p className="text-neutral-600 text-xs mt-1.5">
+            Haftalik sablonunu olusturmak icin Haftalik Sablon sayfasini ziyaret et.
           </p>
         </div>
       )}

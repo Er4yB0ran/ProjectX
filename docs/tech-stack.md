@@ -20,8 +20,11 @@
 
 - **Tailwind CSS 4** (PostCSS)
 - **Lucide React** — ikonlar
-- Tasarım dili: glassmorphism (`bg-white/60`, `backdrop-blur-sm`, `border-white/40`)
-- Renk paleti: `blue → indigo → purple` gradyan arka plan
+- Tasarim dili: Bevel Obsidian Dark (tam karanlik, keskin, veri-odakli)
+  - Arka plan: `bg-neutral-950`, kartlar: `bg-neutral-900 border border-neutral-800`
+  - Glassmorphism ve transparan beyaz arka planlar (`bg-white/*`, `backdrop-blur-*`) kullanilmaz
+  - Metrik rozetler: enerji maliyeti (amber) + esneklik skoru (cyan), gorev kartlarinda goruntulenir
+- Renk paleti: `neutral-950 / neutral-900 / neutral-800` gri skalasi; aksanlar `amber`, `cyan`, `green`, `red`
 
 ## Klasör Yapısı
 
