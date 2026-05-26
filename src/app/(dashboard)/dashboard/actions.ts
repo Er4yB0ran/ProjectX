@@ -216,42 +216,39 @@ export async function closeDayAndReflect(): Promise<{ ai_message: string }> {
 
   if (existing) return { ai_message: existing.ai_message }
 
-  // Bugunun gorevlerini cek
+  // Bugunun gorevlerini cek (original_date ile: ertelenenler dahil tum bugun gorevleri)
   const { data: tasks, error: tasksError } = await supabase
     .from('tasks')
     .select('title, status')
     .eq('user_id', user.id)
-    .eq('task_date', todayStr)
+    .eq('original_date', todayStr)
 
   if (tasksError) throw new Error(tasksError.message)
 
   const allTasks = tasks ?? []
   const completedTasks = allTasks.filter((t) => t.status === 'completed')
-  const rescheduledTasks = allTasks.filter((t) => t.status === 'rescheduled')
-  const cancelledTasks = allTasks.filter((t) => t.status === 'cancelled')
-  const pendingTasks = allTasks.filter((t) => t.status === 'pending')
+  const incompleteTasks = allTasks.filter(
+    (t) => t.status === 'rescheduled' || t.status === 'cancelled' || t.status === 'pending'
+  )
 
   const fmt = (list: { title: string }[]) =>
     list.length > 0 ? list.map((t) => `- ${t.title}`).join('\n') : '(yok)'
 
-  const userPrompt = `Bugunku gorev ozeti:
+  const systemPrompt = `Sen bir sistem yoneticisisin. Kullanicinin zihinsel yukunu devralan, "ben hallettim" guveni veren, keskin ve mekanik bir yapay zekasın. Asla duygusal, motive edici veya teselli edici bir dil kullanma. Asla "harika is cikardin", "dinlenmeyi hak ettin", "uzulme" gibi klise ifadeler kullanma. Ton: kisa, net, soguk degil ama mekanik. Asla emoji kullanma. Turkce yaz.`
+
+  const userPrompt = `Bugunun gorev ozeti:
 
 Tamamlanan gorevler:
 ${fmt(completedTasks)}
 
-Ertelenen gorevler:
-${fmt(rescheduledTasks)}
+Eksik kalan gorevler (ertelenen, iptal edilen veya beklemede):
+${fmt(incompleteTasks)}
 
-Iptal edilen gorevler:
-${fmt(cancelledTasks)}
-
-Hala beklemede kalan gorevler:
-${fmt(pendingTasks)}
-
-Kullaniciya bugunun bir ozetini ver. Tamamladigi isler icin ufak bir takdir sun, ertelenen veya yapilamayan isler icin ASLA sucluyluk hissettirme. Onlara "kalanlari yarina veya uygun zamana hallederiz, programin guvende, simdi zihnini bosalt ve dinlen" minvalinde, kisa, net ve ferahlatici bir metin yaz. Metin 3-4 cumleyi gecmesin. Asla emoji kullanma. Turkce yaz.`
+Tamamlanan gorevleri tek ve net bir cumleyle ozetle. Ardindan eksik kalanlar icin su anlama gelen, ama kendi cumlelerinle ifade ettigin mekanik ve guven veren bir kapatma cumleleri yaz: "Eksik kalan gorevleri onumuzdeki uygun bosluklara entegre ettim. Yeni programin hazir, goz atip zihnini kapatabilirsin." Toplam mesaj 3 cumleti gecmesin.`
 
   const { text } = await generateText({
     model: anthropic('claude-haiku-4-5-20251001'),
+    system: systemPrompt,
     prompt: userPrompt,
   })
 
