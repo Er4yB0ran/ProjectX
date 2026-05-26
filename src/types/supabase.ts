@@ -90,6 +90,7 @@ export type Database = {
           title: string
           description: string | null
           task_date: string
+          original_date: string
           start_time: string | null
           end_time: string | null
           energy_cost: number | null
@@ -104,6 +105,7 @@ export type Database = {
           title: string
           description?: string | null
           task_date?: string
+          original_date?: string
           start_time?: string | null
           end_time?: string | null
           energy_cost?: number | null
@@ -158,6 +160,7 @@ export type Database = {
           title: string
           description: string | null
           task_date: string
+          original_date: string
           start_time: string | null
           end_time: string | null
           energy_cost: number | null

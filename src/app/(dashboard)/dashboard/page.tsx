@@ -40,6 +40,23 @@ export default async function DashboardPage() {
 
   if (error) throw new Error(`Gorevler yuklenemedi: ${error.message}`)
 
+  // Bugun olusturulup ertelenen gorevleri de cek (task_date yarina guncellendi, original_date bugun)
+  const { data: rescheduledFromToday } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('original_date', dateStr)
+    .eq('status', 'rescheduled')
+    .neq('task_date', dateStr)
+    .order('start_time', { ascending: true, nullsFirst: false })
+
+  // Gorev listesini birlestir; RPC'den gelenler once, ertelenenler sona eklenir
+  const todayIds = new Set((tasks ?? []).map((t) => t.id))
+  const allTasks = [
+    ...(tasks ?? []),
+    ...(rescheduledFromToday ?? []).filter((t) => !todayIds.has(t.id)),
+  ]
+
   const { data: todayReflection } = await supabase
     .from('daily_reflections')
     .select('ai_message')
@@ -47,7 +64,7 @@ export default async function DashboardPage() {
     .eq('reflection_date', dateStr)
     .maybeSingle()
 
-  const skeletonBlockIds = (tasks ?? [])
+  const skeletonBlockIds = allTasks
     .map((t) => t.skeleton_block_id)
     .filter(Boolean) as string[]
 
@@ -62,8 +79,8 @@ export default async function DashboardPage() {
     (blocks ?? []).map((b) => [b.id, b.is_hard_constraint ?? false])
   )
 
-  const pending = tasks?.filter((t) => t.status === 'pending') ?? []
-  const completed = tasks?.filter((t) => t.status === 'completed') ?? []
+  const pending = allTasks.filter((t) => t.status === 'pending')
+  const completed = allTasks.filter((t) => t.status === 'completed')
   const displayDate = formatDisplayDate(dateStr)
 
   return (
@@ -87,9 +104,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* Task list */}
-      {tasks && tasks.length > 0 ? (
+      {allTasks.length > 0 ? (
         <ul className="space-y-2">
-          {tasks.map((task) => (
+          {allTasks.map((task) => (
             <li key={task.id}>
               <TaskCard
                 task={task}
