@@ -90,6 +90,7 @@ export type Database = {
           title: string
           description: string | null
           task_date: string
+          original_date: string
           start_time: string | null
           end_time: string | null
           energy_cost: number | null
@@ -104,6 +105,7 @@ export type Database = {
           title: string
           description?: string | null
           task_date?: string
+          original_date?: string
           start_time?: string | null
           end_time?: string | null
           energy_cost?: number | null
@@ -124,6 +126,26 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_reflections: {
+        Row: {
+          id: string
+          user_id: string
+          reflection_date: string
+          ai_message: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          reflection_date: string
+          ai_message: string
+          created_at?: string
+        }
+        Update: {
+          ai_message?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -138,6 +160,7 @@ export type Database = {
           title: string
           description: string | null
           task_date: string
+          original_date: string
           start_time: string | null
           end_time: string | null
           energy_cost: number | null
@@ -181,3 +204,4 @@ export type UpdateTables<T extends keyof PublicSchema['Tables']> =
 export type Profile = Tables<'profiles'>
 export type SkeletonBlock = Tables<'skeleton_blocks'>
 export type Task = Tables<'tasks'>
+export type DailyReflection = Tables<'daily_reflections'>

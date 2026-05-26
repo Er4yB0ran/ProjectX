@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { generateText } from 'ai'
+import { anthropic } from '@ai-sdk/anthropic'
 import type { TaskStatus } from '@/types/supabase'
 
 const END_OF_DAY = 23 * 60 + 59 // 1439 dakika = 23:59
@@ -191,4 +193,77 @@ export async function rescheduleTask(taskId: string) {
     if (err instanceof Error) throw err
     throw new Error('Görev ertelenirken beklenmeyen bir hata oluştu')
   }
+}
+
+export async function closeDayAndReflect(): Promise<{ ai_message: string }> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Oturum acik degil')
+
+  const todayStr = new Intl.DateTimeFormat('sv', { timeZone: 'Europe/Istanbul' }).format(new Date())
+
+  // Bugune ait kayit zaten varsa yeniden uretme
+  const { data: existing } = await supabase
+    .from('daily_reflections')
+    .select('ai_message')
+    .eq('user_id', user.id)
+    .eq('reflection_date', todayStr)
+    .maybeSingle()
+
+  if (existing) return { ai_message: existing.ai_message }
+
+  // Bugunun gorevlerini cek (original_date ile: ertelenenler dahil tum bugun gorevleri)
+  const { data: tasks, error: tasksError } = await supabase
+    .from('tasks')
+    .select('title, status')
+    .eq('user_id', user.id)
+    .eq('original_date', todayStr)
+
+  if (tasksError) throw new Error(tasksError.message)
+
+  const allTasks = tasks ?? []
+  const completedTasks = allTasks.filter((t) => t.status === 'completed')
+  const incompleteTasks = allTasks.filter(
+    (t) => t.status === 'rescheduled' || t.status === 'cancelled' || t.status === 'pending'
+  )
+
+  const fmt = (list: { title: string }[]) =>
+    list.length > 0 ? list.map((t) => `- ${t.title}`).join('\n') : '(yok)'
+
+  const systemPrompt = `Sen bir sistem yoneticisisin. Kullanicinin zihinsel yukunu devralan, "ben hallettim" guveni veren, keskin ve mekanik bir yapay zekasın. Asla duygusal, motive edici veya teselli edici bir dil kullanma. Asla "harika is cikardin", "dinlenmeyi hak ettin", "uzulme" gibi klise ifadeler kullanma. Ton: kisa, net, soguk degil ama mekanik. Asla emoji kullanma. Turkce yaz.`
+
+  const userPrompt = `Bugunun gorev ozeti:
+
+Tamamlanan gorevler:
+${fmt(completedTasks)}
+
+Eksik kalan gorevler (ertelenen, iptal edilen veya beklemede):
+${fmt(incompleteTasks)}
+
+Tamamlanan gorevleri tek ve net bir cumleyle ozetle. Ardindan eksik kalanlar icin su anlama gelen, ama kendi cumlelerinle ifade ettigin mekanik ve guven veren bir kapatma cumleleri yaz: "Eksik kalan gorevleri onumuzdeki uygun bosluklara entegre ettim. Yeni programin hazir, goz atip zihnini kapatabilirsin." Toplam mesaj 3 cumleti gecmesin.`
+
+  const { text } = await generateText({
+    model: anthropic('claude-haiku-4-5-20251001'),
+    system: systemPrompt,
+    prompt: userPrompt,
+  })
+
+  const aiMessage = text.trim()
+
+  const { error: insertError } = await supabase
+    .from('daily_reflections')
+    .insert({
+      user_id: user.id,
+      reflection_date: todayStr,
+      ai_message: aiMessage,
+    })
+
+  if (insertError) throw new Error(insertError.message)
+
+  revalidatePath('/dashboard')
+  return { ai_message: aiMessage }
 }

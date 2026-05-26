@@ -91,7 +91,7 @@ MIN_DURATION = 15            // dakika
 
 **Dosya:** `src/app/(dashboard)/dashboard/TaskCard.tsx` → `isTimeLocked()`
 
-Kullanıcı disiplinini korumak için görevin başlangıç zamanı henüz gelmemişse aksiyon butonları (`Yaptım`, `Erteledim`, `Olmadı`) tamamen gizlenir; yerlerine görünmez bir 🔒 ikonu bırakılır.
+Kullanıcı disiplinini korumak için görevin başlangıç zamanı henüz gelmemişse aksiyon butonları (`Yaptım`, `Erteledim`, `Olmadı`) tamamen gizlenir; yerlerine `--` metni olan soluk bir span bırakılır.
 
 #### Kilit Mantığı
 
@@ -115,14 +115,14 @@ function isTimeLocked(taskDate: string, startTime: string | null): boolean {
 
 | `start_time` | Karşılaştırma | Sonuç |
 |---|---|---|
-| Var | `task_date + start_time` > şu an | 🔒 Kilitli |
-| Var | `task_date + start_time` ≤ şu an | ✅ Butonlar aktif |
-| Yok | `task_date` > bugün | 🔒 Kilitli |
-| Yok | `task_date` ≤ bugün | ✅ Butonlar aktif |
+| Var | `task_date + start_time` > şu an | `--` gösterilir, butonlar kaldırılır |
+| Var | `task_date + start_time` ≤ şu an | Butonlar aktif |
+| Yok | `task_date` > bugün | `--` gösterilir, butonlar kaldırılır |
+| Yok | `task_date` ≤ bugün | Butonlar aktif |
 
 #### UI Davranışı
 
-- **Kilitliyken:** Butonlar DOM'dan tamamen kaldırılır (render edilmez). Yerlerine `title="Bu görevin saati henüz gelmedi"` nitelikli bir `🔒` span konur. Kullanıcı hiçbir şekilde aksiyonu tetikleyemez.
+- **Kilitliyken:** Butonlar DOM'dan tamamen kaldırılır (render edilmez). Yerlerine `title="Bu görevin saati henüz gelmedi"` nitelikli, `text-neutral-700` renginde `--` metni içeren bir span konur. Kullanıcı hiçbir şekilde aksiyonu tetikleyemez.
 - **Kilit açıldığında:** Sayfa yeniden render edildiğinde (`new Date()` güncel değere döner) butonlar otomatik olarak görünür hale gelir.
 - **Tarih kaynağı:** Tüm karşılaştırma **kullanıcının yerel saatine** (`new Date()`, `toLocaleDateString('sv-SE')`) göre yapılır. UTC veya sunucu saatine bağımlılık yoktur.
 
@@ -151,13 +151,13 @@ const isFixed = task.skeleton_block_id
 // fixedBlockIds = skeleton_blocks'ta is_hard_constraint === true olanların id seti
 ```
 
-### 3. Ertelenen Görevlerde Şeffaf Döngü İkonu ve Kenarlık
+### 3. Ertelenen Görevlerde Sol Kenarlık ve Sembol
 
 Status `'rescheduled'` olduğunda:
 
-- Kart stili: `bg-white/40 border-white/20 border-l-4 border-l-amber-400/50`
-- Saat satırına `↺` eklenir (amber, %40 opacity): `text-amber-400/40`
-- StatusIcon: `↷` (amber)
+- Kart stili: `bg-neutral-900 border-y border-r border-neutral-800 border-l-4 border-l-amber-500/50`
+- Saat satırına `~` sembolü eklenir (`text-amber-500/50`)
+- StatusIcon: `->` (amber, `text-amber-400`)
 
 Bu görsel dil "Bu görev ertelendi, bitti sayılmadı" mesajını baskısız şekilde verir.
 
@@ -174,3 +174,92 @@ Aktif buton disabled + renkli görünür (tekrar tıklanamaz). Transition sıras
 ### 5. Optimistik Güncelleme
 
 `useOptimistic` ile kullanıcı butona bastığında UI anında güncellenir, Server Action yanıtı beklenmez. Server Action başarısız olursa React state orijinaline döner.
+
+---
+
+### 6. Tasarim Felsefesi — Bevel Obsidian Dark
+
+Arayüz "Bevel: AI Health Coach" uygulamasinin estetik felsefesinden ilham alır: karanlik, keskin, veriye odakli, minimal.
+
+#### Temel Kurallar
+
+- Arka plan: `bg-neutral-950` (tam karanlik)
+- Panel/sidebar: `bg-neutral-900`
+- Kart: `bg-neutral-900 border border-neutral-800 rounded-xl`
+- **Glassmorphism tamamen yasak:** `backdrop-blur-*`, `bg-white/*`, `bg-blue-50` ve benzeri transparan/beyaz arka planlar kullanilmaz.
+- Kenarlik: 1px, `border-neutral-800` (varsayilan) veya `border-neutral-700` (ic kart)
+
+#### Metin Hiyerarsisi
+
+| Katman | Sinif |
+|---|---|
+| Birincil baslik | `text-white` |
+| Ikincil/aciklama | `text-neutral-400` |
+| Soluk/ipucu | `text-neutral-600` |
+| Monospace/saat | `text-neutral-500 font-mono tabular-nums` |
+
+#### Metrik Rozetler
+
+Gorev kartlarinda enerji maliyeti ve esneklik skoru kucuk, yuksek kontrastli rozetlerle gosterilir:
+
+- Enerji (E): `text-amber-400 bg-amber-500/10 border border-amber-500/20`
+- Esneklik (F): `text-cyan-400 bg-cyan-500/10 border border-cyan-500/20`
+- Sabit gorev (SAB): `text-red-400 bg-red-500/10 border border-red-500/20`
+
+#### Buton Felsefesi
+
+Butonlar varsayilan durumda minimal ve dusuk kontrast gorünür; sadece hover veya aktif durumda renklenir. Büyük, dikkat cekici CTA butonlari kullanilmaz.
+
+- Aksiyon butonlari (Yaptim/Erteledim/Olmadi): yarim saydam arka plan + ince kenarlik, sadece etkilesimde belirgin hale gelir.
+- Birincil eylem butonu (Yeni Blok): `bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white`
+
+---
+
+## Gunu Kapat (Destekci Abi Ozeti)
+
+**Dosya:** `src/app/(dashboard)/dashboard/actions.ts` → `closeDayAndReflect()`
+**UI:** `src/app/(dashboard)/dashboard/CloseDay.tsx`
+
+### Amac
+
+Kullanicinin gunu kapatirken zihinsel yukunu almak. AI'in rolu yargici veya baskici bir yasam kocu degil; destekleyici bir akil hocasi.
+
+### Akis
+
+```
+1. Kullanici "Gunu Kapat" butonuna tiklar
+   |
+2. closeDayAndReflect() Server Action calisir
+   |
+3. Bugun icin daily_reflections kaydi var mi?
+   EVET → mevcut ai_message'i don (tekrar uretme)
+   HAYIR → devam
+   |
+4. Bugunun tum gorevlerini cek (tasks tablosu, task_date = bugun)
+   → Gruplanir: tamamlanan / ertelenen / iptal edilen / beklemede
+   |
+5. generateText() ile Claude Haiku'ya gonder
+   Prompt: destekleyici, sucluyluk hissettirmeyen, 3-4 cumle, Turkce
+   |
+6. Uretilen mesaj daily_reflections tablosuna kaydet
+   |
+7. revalidatePath('/dashboard') → Server Component yeniden render
+```
+
+### UI Kurallari
+
+- **Kayit yoksa:** `bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white` tam genislikte buton.
+- **Yukleme durumu:** `useTransition` ile `isPending` izlenir; buton metni "Ozet Hazirlaniyor..." olur, buton `disabled`.
+- **Kayit varsa:** Buton gizlenir; mesaj karti gosterilir.
+  - Kart stili: `bg-neutral-900 border border-neutral-800 rounded-xl`
+  - Metin: `text-neutral-300 text-sm leading-relaxed`
+  - Baslik: `text-neutral-500 text-xs uppercase tracking-widest`
+- Glassmorphism kesinlikle kullanilamaz.
+
+### AI Prompt Felsefesi
+
+- Sucluyluk, pismanlık veya baskilama yok.
+- Tamamlanan isler icin kisa, samimi bir takdir.
+- Eksik kalanlar icin "program guvende, dinlen" mesaji.
+- Uzunluk: en fazla 3-4 cumle.
+- Dil: Turkce, emoji yok.

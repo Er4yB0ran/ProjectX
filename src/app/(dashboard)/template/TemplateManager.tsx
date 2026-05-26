@@ -5,30 +5,29 @@ import type { SkeletonBlock } from '@/types/supabase'
 import { createTemplateBlock, updateTemplateBlock, deleteTemplateBlock } from './actions'
 import type { BlockFormData } from './actions'
 
-// ─── Sabitler ────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 /**
- * DB encoding: 0 = Pazartesi … 5 = Cumartesi, 6 = Pazar
- * (dashboard/page.tsx: dbDayOfWeek = (jsDay + 6) % 7)
+ * DB encoding: 0 = Monday ... 5 = Saturday, 6 = Sunday
  */
 const DAY_NAMES = [
   'Pazartesi',
-  'Salı',
-  'Çarşamba',
-  'Perşembe',
+  'Sali',
+  'Carsamba',
+  'Persembe',
   'Cuma',
   'Cumartesi',
   'Pazar',
 ] as const
 
 const DAY_COLORS = [
-  'bg-blue-400/15 text-blue-600',
-  'bg-indigo-400/15 text-indigo-600',
-  'bg-violet-400/15 text-violet-600',
-  'bg-purple-400/15 text-purple-600',
-  'bg-pink-400/15 text-pink-600',
-  'bg-rose-400/15 text-rose-600',
-  'bg-amber-400/15 text-amber-600',
+  'bg-blue-500/15 text-blue-400',
+  'bg-indigo-500/15 text-indigo-400',
+  'bg-violet-500/15 text-violet-400',
+  'bg-purple-500/15 text-purple-400',
+  'bg-pink-500/15 text-pink-400',
+  'bg-rose-500/15 text-rose-400',
+  'bg-amber-500/15 text-amber-400',
 ] as const
 
 // ─── Form state ───────────────────────────────────────────────────────────────
@@ -54,23 +53,11 @@ interface ScoreButtonsProps {
   variant: 'amber' | 'indigo'
 }
 
-function ScoreButtons({ value, onChange, disabled, variant }: ScoreButtonsProps) {
-  const LABELS: Record<number, string> = {
-    1: '1',
-    2: '2',
-    3: '3',
-    4: '4',
-    5: '5',
-  }
-
+function ScoreButtons({ value, onChange, disabled }: ScoreButtonsProps) {
   return (
     <div className="flex gap-1.5">
       {([1, 2, 3, 4, 5] as const).map((n) => {
         const isActive = value === n
-        const activeClass =
-          variant === 'amber'
-            ? 'bg-amber-400 text-white border-amber-400'
-            : 'bg-indigo-500 text-white border-indigo-500'
         return (
           <button
             key={n}
@@ -78,11 +65,14 @@ function ScoreButtons({ value, onChange, disabled, variant }: ScoreButtonsProps)
             onClick={() => !disabled && onChange(n)}
             disabled={disabled}
             aria-pressed={isActive}
-            className={`w-9 h-9 text-xs rounded-xl font-semibold border transition-all
-              ${isActive ? activeClass : 'bg-white/60 text-gray-500 border-gray-200 hover:bg-gray-100'}
+            className={`w-9 h-9 text-xs rounded-lg font-semibold border transition-all
+              ${isActive
+                ? 'bg-neutral-700 text-white border-neutral-600'
+                : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:bg-neutral-700 hover:text-white'
+              }
               ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
           >
-            {LABELS[n]}
+            {n}
           </button>
         )
       })}
@@ -105,7 +95,7 @@ function ToggleSwitch({ checked, onChange, disabled }: ToggleSwitchProps) {
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className={`relative w-11 h-6 rounded-full transition-colors duration-200
-        ${checked ? 'bg-red-400' : 'bg-gray-200'}
+        ${checked ? 'bg-red-500' : 'bg-neutral-700'}
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <span
@@ -130,59 +120,57 @@ function BlockCard({ block, onEdit, onDelete, isDeleting, isPending }: BlockCard
   return (
     <div
       className={`flex items-center justify-between gap-3 px-3.5 py-3
-        bg-white/65 backdrop-blur-sm border border-white/50 rounded-xl
+        bg-neutral-800 border border-neutral-700 rounded-xl
         transition-all duration-200
         ${isDeleting ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
     >
-      {/* Sol: başlık + saat bilgisi */}
+      {/* Left: title + time */}
       <div className="flex items-start gap-2 min-w-0">
         {block.is_hard_constraint && (
           <span
-            title="Sabit görev — ertelenemez"
-            className="shrink-0 mt-0.5 text-xs text-red-400 select-none"
+            title="Sabit gorev — ertelenemez"
+            className="shrink-0 mt-0.5 text-[10px] font-medium text-red-400 bg-red-500/10 border border-red-500/20 px-1 py-0.5 rounded select-none"
           >
-            🔒
+            SAB
           </span>
         )}
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-800 truncate leading-snug">
+          <p className="text-sm font-medium text-white truncate leading-snug">
             {block.title}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5 font-mono">
-            {block.start_time.slice(0, 5)} – {block.end_time.slice(0, 5)}
+          <p className="text-xs text-neutral-500 mt-0.5 font-mono tabular-nums">
+            {block.start_time.slice(0, 5)} - {block.end_time.slice(0, 5)}
           </p>
         </div>
       </div>
 
-      {/* Sağ: skor rozetleri + aksiyonlar */}
+      {/* Right: score badges + actions */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Enerji */}
-        <span className="hidden sm:flex items-center gap-0.5 text-xs text-amber-500 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded-md">
-          <span>⚡</span>
-          <span>{block.energy_cost}</span>
+        {/* Energy */}
+        <span className="hidden sm:flex items-center gap-0.5 text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded tabular-nums">
+          E {block.energy_cost}
         </span>
-        {/* Esneklik */}
-        <span className="hidden sm:flex items-center gap-0.5 text-xs text-indigo-500 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md">
-          <span>↔</span>
-          <span>{block.flexibility_score}</span>
+        {/* Flexibility */}
+        <span className="hidden sm:flex items-center gap-0.5 text-[10px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded tabular-nums">
+          F {block.flexibility_score}
         </span>
 
-        {/* Butonlar */}
+        {/* Buttons */}
         <button
           type="button"
           onClick={onEdit}
           disabled={isPending}
-          className="text-xs text-indigo-500 hover:text-white hover:bg-indigo-500 border border-indigo-200 hover:border-indigo-500
-            px-2.5 py-1 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs text-neutral-400 hover:text-white border border-neutral-700 hover:border-neutral-500 hover:bg-neutral-700
+            px-2.5 py-1 rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Düzenle
+          Duzenle
         </button>
         <button
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          className="text-xs text-red-400 hover:text-white hover:bg-red-400 border border-red-200 hover:border-red-400
-            px-2.5 py-1 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs text-neutral-500 hover:text-red-400 border border-neutral-700 hover:border-red-500/30 hover:bg-red-500/10
+            px-2.5 py-1 rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Sil
         </button>
@@ -215,7 +203,6 @@ function BlockModal({
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => {
       const next = { ...prev, [key]: value }
-      // İş kuralı: sabit görev → esneklik skoru her zaman 1
       if (key === 'is_hard_constraint' && value === true) {
         next.flexibility_score = 1
       }
@@ -228,66 +215,66 @@ function BlockModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4
-        bg-black/25 backdrop-blur-sm"
+        bg-black/60"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="w-full sm:max-w-md bg-white/92 backdrop-blur-md border border-white/60
-          rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[92svh] sm:max-h-[90vh]"
+        className="w-full sm:max-w-md bg-neutral-900 border border-neutral-800
+          rounded-t-xl sm:rounded-xl overflow-y-auto max-h-[92svh] sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-          <h3 className="text-base font-semibold text-gray-800">
-            {isEditing ? 'Bloğu Düzenle' : 'Yeni Blok Ekle'}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-neutral-800">
+          <h3 className="text-base font-semibold text-white">
+            {isEditing ? 'Bloku Duzenle' : 'Yeni Blok Ekle'}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100"
+            className="text-neutral-500 hover:text-white transition-colors text-lg leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-800"
           >
-            ✕
+            x
           </button>
         </div>
 
         {/* Form */}
         <div className="px-5 py-4 space-y-4">
-          {/* Görev Adı */}
+          {/* Gorev Adi */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Görev Adı</label>
+            <label className="block text-xs font-medium text-neutral-400 mb-1.5">Gorev Adi</label>
             <input
               type="text"
               value={form.title}
               onChange={(e) => update('title', e.target.value)}
-              placeholder="Sabah egzersizi, Ders çalışma..."
+              placeholder="Sabah egzersizi, Ders calisma..."
               autoFocus
-              className="w-full px-3 py-2.5 text-sm bg-white/80 border border-gray-200 rounded-xl
-                focus:outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300
-                placeholder-gray-300 transition-all"
+              className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
+                focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
+                placeholder-neutral-600 transition-all"
             />
           </div>
 
-          {/* Gün */}
+          {/* Gun */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Gün</label>
+            <label className="block text-xs font-medium text-neutral-400 mb-1.5">Gun</label>
             <div className="relative">
               <select
                 value={form.day_of_week}
                 onChange={(e) => update('day_of_week', Number(e.target.value))}
-                className="w-full px-3 py-2.5 text-sm bg-white/80 border border-gray-200 rounded-xl
-                  focus:outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300
+                className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
+                  focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
                   appearance-none cursor-pointer transition-all"
               >
                 {DAY_NAMES.map((name, i) => (
-                  <option key={i} value={i}>
+                  <option key={i} value={i} className="bg-neutral-800 text-white">
                     {name}
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
-                ▾
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-xs">
+                v
               </span>
             </div>
           </div>
@@ -295,35 +282,35 @@ function BlockModal({
           {/* Saatler */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Başlangıç</label>
+              <label className="block text-xs font-medium text-neutral-400 mb-1.5">Baslangic</label>
               <input
                 type="time"
                 value={form.start_time}
                 onChange={(e) => update('start_time', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-white/80 border border-gray-200 rounded-xl
-                  focus:outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300
+                className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
+                  focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
                   transition-all"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Bitiş</label>
+              <label className="block text-xs font-medium text-neutral-400 mb-1.5">Bitis</label>
               <input
                 type="time"
                 value={form.end_time}
                 onChange={(e) => update('end_time', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-white/80 border border-gray-200 rounded-xl
-                  focus:outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300
+                className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
+                  focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
                   transition-all"
               />
             </div>
           </div>
 
-          {/* Sabit Görev Toggle */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-50/80 border border-gray-100 rounded-xl">
+          {/* Sabit Gorev Toggle */}
+          <div className="flex items-center justify-between px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl">
             <div>
-              <p className="text-xs font-medium text-gray-700">Sabit Görev</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Ders, staj, randevu gibi kaydırılamaz bloklar
+              <p className="text-xs font-medium text-neutral-300">Sabit Gorev</p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Ders, staj, randevu gibi kaydirilamaz bloklar
               </p>
             </div>
             <ToggleSwitch
@@ -335,9 +322,9 @@ function BlockModal({
           {/* Enerji Maliyeti */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium text-gray-600">Enerji Maliyeti</label>
-              <span className="text-xs text-amber-500 font-medium">
-                {['', 'Çok Düşük', 'Düşük', 'Orta', 'Yüksek', 'Çok Yüksek'][form.energy_cost]}
+              <label className="text-xs font-medium text-neutral-400">Enerji Maliyeti</label>
+              <span className="text-xs text-amber-400 font-medium">
+                {['', 'Cok Dusuk', 'Dusuk', 'Orta', 'Yuksek', 'Cok Yuksek'][form.energy_cost]}
               </span>
             </div>
             <ScoreButtons
@@ -351,17 +338,17 @@ function BlockModal({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label
-                className={`text-xs font-medium ${form.is_hard_constraint ? 'text-gray-400' : 'text-gray-600'}`}
+                className={`text-xs font-medium ${form.is_hard_constraint ? 'text-neutral-600' : 'text-neutral-400'}`}
               >
                 Esneklik Skoru
                 {form.is_hard_constraint && (
-                  <span className="ml-1.5 text-red-400 font-normal">(sabit görevde 1&apos;e kilitlendi)</span>
+                  <span className="ml-1.5 text-red-400 font-normal">(sabit gorevde 1&apos;e kilitlendi)</span>
                 )}
               </label>
               <span
-                className={`text-xs font-medium ${form.is_hard_constraint ? 'text-gray-400' : 'text-indigo-500'}`}
+                className={`text-xs font-medium ${form.is_hard_constraint ? 'text-neutral-600' : 'text-cyan-400'}`}
               >
-                {['', 'Kesinlikle bu saatte', 'Çok az esneklik', 'Orta esneklik', 'Esnek', 'Tam esnek'][form.flexibility_score]}
+                {['', 'Kesinlikle bu saatte', 'Cok az esneklik', 'Orta esneklik', 'Esnek', 'Tam esnek'][form.flexibility_score]}
               </span>
             </div>
             <ScoreButtons
@@ -372,40 +359,40 @@ function BlockModal({
             />
           </div>
 
-          {/* Hata mesajı */}
+          {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-              <span className="text-red-400 mt-0.5 shrink-0">⚠</span>
-              <p className="text-xs text-red-600">{error}</p>
+            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5">
+              <span className="text-red-400 mt-0.5 shrink-0">!</span>
+              <p className="text-xs text-red-400">{error}</p>
             </div>
           )}
         </div>
 
         {/* Modal footer */}
-        <div className="flex gap-2 px-5 pb-5 pt-3 border-t border-gray-100">
+        <div className="flex gap-2 px-5 pb-5 pt-3 border-t border-neutral-800">
           <button
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="flex-1 py-2.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200
+            className="flex-1 py-2.5 text-sm text-neutral-300 bg-neutral-800 hover:bg-neutral-700
               rounded-xl transition-colors disabled:opacity-50 font-medium"
           >
-            İptal
+            Iptal
           </button>
           <button
             type="button"
             onClick={onSubmit}
             disabled={isSubmitDisabled}
-            className="flex-1 py-2.5 text-sm text-white bg-indigo-500 hover:bg-indigo-600
+            className="flex-1 py-2.5 text-sm text-white bg-neutral-700 hover:bg-neutral-600
               rounded-xl transition-colors disabled:opacity-50 font-medium"
           >
             {isPending ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Kaydediliyor…
+                <span className="w-3.5 h-3.5 border-2 border-neutral-500 border-t-white rounded-full animate-spin" />
+                Kaydediliyor...
               </span>
             ) : isEditing ? (
-              'Güncelle'
+              'Guncelle'
             ) : (
               'Ekle'
             )}
@@ -416,7 +403,7 @@ function BlockModal({
   )
 }
 
-// ─── Ana Bileşen ──────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 interface TemplateManagerProps {
   blocks: SkeletonBlock[]
@@ -425,7 +412,6 @@ interface TemplateManagerProps {
 export default function TemplateManager({ blocks: initialBlocks }: TemplateManagerProps) {
   const [isPending, startTransition] = useTransition()
 
-  // Silme işlemi için optimistic UI
   const [optimisticBlocks, dispatchOptimistic] = useOptimistic(
     initialBlocks,
     (state: SkeletonBlock[], action: { type: 'delete'; id: string } | { type: 'update'; block: SkeletonBlock }) => {
@@ -435,14 +421,11 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
     }
   )
 
-  // Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [editingBlock, setEditingBlock] = useState<SkeletonBlock | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [formError, setFormError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-
-  // ── Modal yardımcıları ──
 
   function openCreate() {
     setEditingBlock(null)
@@ -467,27 +450,23 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
   }
 
   function closeModal() {
-    if (isPending) return // işlem devam ederken kapatma
+    if (isPending) return
     setModalOpen(false)
     setEditingBlock(null)
     setFormError(null)
   }
-
-  // ── Aksiyonlar ──
 
   function handleSubmit() {
     setFormError(null)
 
     const payload: BlockFormData = {
       ...form,
-      // İş kuralı: sabit görev → esneklik skoru 1
       flexibility_score: form.is_hard_constraint ? 1 : form.flexibility_score,
     }
 
     startTransition(async () => {
       try {
         if (editingBlock) {
-          // Optimistic update
           dispatchOptimistic({
             type: 'update',
             block: {
@@ -503,13 +482,13 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
         }
         closeModal()
       } catch (err) {
-        setFormError(err instanceof Error ? err.message : 'Beklenmeyen bir hata oluştu')
+        setFormError(err instanceof Error ? err.message : 'Beklenmeyen bir hata olustu')
       }
     })
   }
 
   function handleDelete(block: SkeletonBlock) {
-    if (!confirm(`"${block.title}" bloğunu silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz.`)) return
+    if (!confirm(`"${block.title}" blogunu silmek istediginizden emin misiniz?\n\nBu islem geri alinamaz.`)) return
 
     setDeletingId(block.id)
 
@@ -519,14 +498,11 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
         await deleteTemplateBlock(block.id)
       } catch (err) {
         console.error('Blok silinemedi:', err)
-        // useOptimistic otomatik olarak önceki state'e döner
       } finally {
         setDeletingId(null)
       }
     })
   }
-
-  // ── Gün bazında gruplama ──
 
   const blocksByDay = DAY_NAMES.map((_, i) =>
     optimisticBlocks
@@ -539,16 +515,16 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
 
   return (
     <>
-      {/* ── Sayfa ── */}
+      {/* Page */}
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-800">Haftalık Şablon</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <h2 className="text-2xl font-semibold text-white tracking-tight">Haftalik Sablon</h2>
+            <p className="text-sm text-neutral-500 mt-0.5">
               {totalBlocks} blok
               {hardBlocks > 0 && (
-                <span className="ml-2 text-red-400">• {hardBlocks} sabit</span>
+                <span className="ml-2 text-red-400">/ {hardBlocks} sabit</span>
               )}
             </p>
           </div>
@@ -556,34 +532,34 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
             type="button"
             onClick={openCreate}
             disabled={isPending}
-            className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white
+            className="flex items-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700
               text-sm font-medium px-4 py-2.5 rounded-xl transition-colors
-              disabled:opacity-50 shadow-sm shadow-indigo-200"
+              disabled:opacity-50"
           >
             <span className="text-base leading-none">+</span>
             Yeni Blok
           </button>
         </div>
 
-        {/* İstatistik kartları */}
+        {/* Stat cards */}
         {totalBlocks > 0 && (
           <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-white/55 backdrop-blur-sm border border-white/40 rounded-2xl px-4 py-3 text-center">
-              <p className="text-xl font-semibold text-gray-800">{totalBlocks}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Toplam Blok</p>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-center">
+              <p className="text-xl font-semibold text-white tabular-nums">{totalBlocks}</p>
+              <p className="text-xs text-neutral-500 mt-0.5">Toplam Blok</p>
             </div>
-            <div className="bg-white/55 backdrop-blur-sm border border-white/40 rounded-2xl px-4 py-3 text-center">
-              <p className="text-xl font-semibold text-red-500">{hardBlocks}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Sabit</p>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-center">
+              <p className="text-xl font-semibold text-red-400 tabular-nums">{hardBlocks}</p>
+              <p className="text-xs text-neutral-500 mt-0.5">Sabit</p>
             </div>
-            <div className="bg-white/55 backdrop-blur-sm border border-white/40 rounded-2xl px-4 py-3 text-center">
-              <p className="text-xl font-semibold text-green-600">{totalBlocks - hardBlocks}</p>
-              <p className="text-xs text-gray-400 mt-0.5">Esnek</p>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-center">
+              <p className="text-xl font-semibold text-green-400 tabular-nums">{totalBlocks - hardBlocks}</p>
+              <p className="text-xs text-neutral-500 mt-0.5">Esnek</p>
             </div>
           </div>
         )}
 
-        {/* Günler */}
+        {/* Days */}
         <div className="space-y-3">
           {DAY_NAMES.map((dayName, dayIndex) => {
             const dayBlocks = blocksByDay[dayIndex]
@@ -592,23 +568,23 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
             return (
               <div
                 key={dayIndex}
-                className="bg-white/55 backdrop-blur-sm border border-white/40 rounded-2xl p-4"
+                className="bg-neutral-900 border border-neutral-800 rounded-xl p-4"
               >
-                {/* Gün başlığı */}
+                {/* Day header */}
                 <div className="flex items-center gap-2 mb-3">
                   <span
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full ${colorClass}`}
                   >
                     {dayName}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-neutral-600">
                     {dayBlocks.length > 0
                       ? `${dayBlocks.length} blok`
-                      : 'boş'}
+                      : 'bos'}
                   </span>
                 </div>
 
-                {/* Bloklar */}
+                {/* Blocks */}
                 {dayBlocks.length > 0 ? (
                   <div className="space-y-2">
                     {dayBlocks.map((block) => (
@@ -623,8 +599,8 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-300 italic pl-1">
-                    Bu gün için henüz blok eklenmedi
+                  <p className="text-xs text-neutral-700 pl-1">
+                    Bu gun icin henuz blok eklenmedi
                   </p>
                 )}
               </div>
@@ -632,18 +608,18 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
           })}
         </div>
 
-        {/* Boş durum */}
+        {/* Empty state */}
         {totalBlocks === 0 && (
-          <div className="mt-4 bg-white/40 backdrop-blur-sm border border-dashed border-gray-300/50 rounded-2xl p-10 text-center">
-            <p className="text-gray-400 text-sm">Henüz haftalık şablon oluşturulmadı.</p>
-            <p className="text-gray-300 text-xs mt-1.5">
-              Yukarıdaki &ldquo;+ Yeni Blok&rdquo; butonuyla ilk bloğunu ekleyebilirsin.
+          <div className="mt-4 bg-neutral-900 border border-dashed border-neutral-700 rounded-xl p-10 text-center">
+            <p className="text-neutral-400 text-sm">Henuz haftalik sablon olusturulmadi.</p>
+            <p className="text-neutral-600 text-xs mt-1.5">
+              Yukaridaki &ldquo;+ Yeni Blok&rdquo; butonuyla ilk blogunu ekleyebilirsin.
             </p>
           </div>
         )}
       </div>
 
-      {/* ── Modal ── */}
+      {/* Modal */}
       {modalOpen && (
         <BlockModal
           isEditing={editingBlock !== null}

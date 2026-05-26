@@ -62,6 +62,27 @@ Günlük görev örnekleri. `get_or_create_daily_tasks` RPC çalıştığında o
 
 ---
 
+---
+
+### `daily_reflections`
+
+Kullanicinin "Gunu Kapat" aksiyonuyla AI'in urettigi gunluk ozet mesajlarini saklar. Her kullanici icin gunluk bir kayit tutulur (`user_id + reflection_date` unique constraint ile). Insert-once modeldir; sonradan guncellenmez veya silinemez.
+
+| Kolon | Tip | Notlar |
+|-------|-----|--------|
+| `id` | uuid PK | |
+| `user_id` | uuid FK → profiles | `on delete cascade` |
+| `reflection_date` | date | Ornek: `2026-05-26` |
+| `ai_message` | text | AI'in urettigi 3-4 cumlelik Turkce ozet |
+| `created_at` | timestamptz | |
+
+**RLS:**
+- `SELECT` — sadece `auth.uid() = user_id`
+- `INSERT` — sadece `auth.uid() = user_id`
+- `UPDATE` / `DELETE` — yok (gecmis ozetler degistirilemez)
+
+---
+
 ## skeleton_blocks ↔ tasks İlişkisi
 
 ```
