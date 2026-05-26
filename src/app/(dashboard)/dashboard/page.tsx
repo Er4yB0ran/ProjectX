@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import TaskCard from './TaskCard'
+import CloseDay from './CloseDay'
 
 function getTodayIstanbul(): { dateStr: string; dbDayOfWeek: number } {
   const dateStr = new Intl.DateTimeFormat('sv', { timeZone: 'Europe/Istanbul' }).format(new Date())
@@ -38,6 +39,13 @@ export default async function DashboardPage() {
   })
 
   if (error) throw new Error(`Gorevler yuklenemedi: ${error.message}`)
+
+  const { data: todayReflection } = await supabase
+    .from('daily_reflections')
+    .select('ai_message')
+    .eq('user_id', user.id)
+    .eq('reflection_date', dateStr)
+    .maybeSingle()
 
   const skeletonBlockIds = (tasks ?? [])
     .map((t) => t.skeleton_block_id)
@@ -103,6 +111,9 @@ export default async function DashboardPage() {
           </p>
         </div>
       )}
+
+      {/* Close Day */}
+      <CloseDay existingMessage={todayReflection?.ai_message ?? null} />
     </div>
   )
 }

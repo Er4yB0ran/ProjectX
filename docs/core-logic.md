@@ -212,3 +212,54 @@ Butonlar varsayilan durumda minimal ve dusuk kontrast gorünür; sadece hover ve
 
 - Aksiyon butonlari (Yaptim/Erteledim/Olmadi): yarim saydam arka plan + ince kenarlik, sadece etkilesimde belirgin hale gelir.
 - Birincil eylem butonu (Yeni Blok): `bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white`
+
+---
+
+## Gunu Kapat (Destekci Abi Ozeti)
+
+**Dosya:** `src/app/(dashboard)/dashboard/actions.ts` → `closeDayAndReflect()`
+**UI:** `src/app/(dashboard)/dashboard/CloseDay.tsx`
+
+### Amac
+
+Kullanicinin gunu kapatirken zihinsel yukunu almak. AI'in rolu yargici veya baskici bir yasam kocu degil; destekleyici bir akil hocasi.
+
+### Akis
+
+```
+1. Kullanici "Gunu Kapat" butonuna tiklar
+   |
+2. closeDayAndReflect() Server Action calisir
+   |
+3. Bugun icin daily_reflections kaydi var mi?
+   EVET → mevcut ai_message'i don (tekrar uretme)
+   HAYIR → devam
+   |
+4. Bugunun tum gorevlerini cek (tasks tablosu, task_date = bugun)
+   → Gruplanir: tamamlanan / ertelenen / iptal edilen / beklemede
+   |
+5. generateText() ile Claude Haiku'ya gonder
+   Prompt: destekleyici, sucluyluk hissettirmeyen, 3-4 cumle, Turkce
+   |
+6. Uretilen mesaj daily_reflections tablosuna kaydet
+   |
+7. revalidatePath('/dashboard') → Server Component yeniden render
+```
+
+### UI Kurallari
+
+- **Kayit yoksa:** `bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white` tam genislikte buton.
+- **Yukleme durumu:** `useTransition` ile `isPending` izlenir; buton metni "Ozet Hazirlaniyor..." olur, buton `disabled`.
+- **Kayit varsa:** Buton gizlenir; mesaj karti gosterilir.
+  - Kart stili: `bg-neutral-900 border border-neutral-800 rounded-xl`
+  - Metin: `text-neutral-300 text-sm leading-relaxed`
+  - Baslik: `text-neutral-500 text-xs uppercase tracking-widest`
+- Glassmorphism kesinlikle kullanilamaz.
+
+### AI Prompt Felsefesi
+
+- Sucluyluk, pismanlık veya baskilama yok.
+- Tamamlanan isler icin kisa, samimi bir takdir.
+- Eksik kalanlar icin "program guvende, dinlen" mesaji.
+- Uzunluk: en fazla 3-4 cumle.
+- Dil: Turkce, emoji yok.
