@@ -118,17 +118,36 @@ export default function OnboardingForm() {
     }
   }
 
+  /* ── Design tokens ── */
   const inputClass =
-    'w-full bg-white/10 border border-white/20 text-white placeholder-white/40 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/30 transition-all'
+    'w-full bg-[#0a0a0f] border border-[#25253a] text-white placeholder-white/20 ' +
+    'rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-500/40 ' +
+    'focus:ring-1 focus:ring-violet-500/15 transition-all duration-200 [color-scheme:dark] text-sm'
 
-  const pillBase = 'px-4 py-2 rounded-full border text-sm font-medium transition-all duration-150 cursor-pointer select-none'
-  const pillActive = 'bg-purple-500/30 border-purple-400/50 shadow-lg shadow-purple-500/20 text-white'
-  const pillInactive = 'bg-white/5 border-white/20 text-white/60 hover:bg-white/10 hover:text-white/80'
+  const pillBase =
+    'px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 cursor-pointer select-none'
+  const pillActive =
+    'bg-violet-600/20 border-violet-500/45 text-violet-200 shadow-[0_0_14px_rgba(139,92,246,0.18)]'
+  const pillInactive =
+    'bg-[#0e0e16] border-[#25253a] text-white/40 hover:bg-[#14141e] hover:text-white/65 hover:border-[#363650]'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        {/* Step indicator */}
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: '#07070a' }}
+    >
+      {/* Ambient obsidian glow — very subtle, far above */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 80% 40% at 50% -5%, rgba(109,40,217,0.07) 0%, transparent 55%)',
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-lg">
+
+        {/* ── Step indicator ── */}
         <div className="flex items-center justify-center mb-8 gap-0">
           {STEP_TITLES.map((title, i) => {
             const n = i + 1
@@ -136,21 +155,33 @@ export default function OnboardingForm() {
             const isDone = n < step
             return (
               <div key={n} className="flex items-center">
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-1.5">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
                       isActive
-                        ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/40'
+                        ? 'bg-violet-600 text-white'
                         : isDone
-                        ? 'bg-purple-500/50 text-white/80'
-                        : 'bg-white/10 text-white/40'
+                        ? 'bg-violet-600/35 text-violet-300'
+                        : 'bg-[#141418] border border-[#25253a] text-white/20'
                     }`}
+                    style={
+                      isActive
+                        ? {
+                            boxShadow:
+                              '0 0 0 3px rgba(124,58,237,0.18), 0 0 16px rgba(124,58,237,0.35)',
+                          }
+                        : undefined
+                    }
                   >
                     {isDone ? '✓' : n}
                   </div>
                   <span
-                    className={`text-[10px] hidden sm:block transition-all ${
-                      isActive ? 'text-purple-300' : isDone ? 'text-white/40' : 'text-white/20'
+                    className={`text-[10px] hidden sm:block transition-all duration-300 ${
+                      isActive
+                        ? 'text-violet-400'
+                        : isDone
+                        ? 'text-white/25'
+                        : 'text-white/12'
                     }`}
                   >
                     {title}
@@ -158,8 +189,8 @@ export default function OnboardingForm() {
                 </div>
                 {i < STEP_TITLES.length - 1 && (
                   <div
-                    className={`h-px w-8 sm:w-12 mx-1 mb-4 transition-all ${
-                      isDone ? 'bg-purple-500/50' : 'bg-white/10'
+                    className={`h-px w-8 sm:w-12 mx-1 mb-5 transition-all duration-500 ${
+                      isDone ? 'bg-violet-600/35' : 'bg-[#1e1e28]'
                     }`}
                   />
                 )}
@@ -168,10 +199,20 @@ export default function OnboardingForm() {
           })}
         </div>
 
-        {/* Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl p-8">
-          <h2 className="text-xl font-semibold text-white mb-1">{STEP_TITLES[step - 1]}</h2>
-          <p className="text-white/40 text-sm mb-6">
+        {/* ── Card ── */}
+        <div
+          className="rounded-3xl p-8 border border-[#1e1e2a]"
+          style={{
+            background: '#0d0d12',
+            boxShadow:
+              '0 28px 64px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.04)',
+          }}
+        >
+          {/* Card header */}
+          <h2 className="text-xl font-semibold text-white mb-1 tracking-tight">
+            {STEP_TITLES[step - 1]}
+          </h2>
+          <p className="text-white/32 text-sm mb-6">
             {step === 1 && 'Günlük uyku rutinini belirle.'}
             {step === 2 && 'Esnetemeyeceğin sabit bloklarını ekle.'}
             {step === 3 && 'En verimli olduğun saatleri seç.'}
@@ -179,195 +220,211 @@ export default function OnboardingForm() {
             {step === 5 && 'Rutin ve planlama tarzın hakkında kısa bilgi ver.'}
           </p>
 
-          {/* STEP 1 */}
-          {step === 1 && (
-            <div className="space-y-5">
-              <div>
-                <p className="text-white/60 text-xs uppercase tracking-wider mb-3">Hafta İçi</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-white/50 text-xs mb-1.5">Uyanma Saati</label>
-                    <input
-                      type="time"
-                      value={form.weekdayWakeUp}
-                      onChange={(e) => updateField('weekdayWakeUp', e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/50 text-xs mb-1.5">Uyuma Saati</label>
-                    <input
-                      type="time"
-                      value={form.weekdaySleep}
-                      onChange={(e) => updateField('weekdaySleep', e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <p className="text-white/60 text-xs uppercase tracking-wider mb-3">Hafta Sonu</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-white/50 text-xs mb-1.5">Uyanma Saati</label>
-                    <input
-                      type="time"
-                      value={form.weekendWakeUp}
-                      onChange={(e) => updateField('weekendWakeUp', e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/50 text-xs mb-1.5">Uyuma Saati</label>
-                    <input
-                      type="time"
-                      value={form.weekendSleep}
-                      onChange={(e) => updateField('weekendSleep', e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Step content — key triggers re-mount + fade-up animation */}
+          <div key={step} className="animate-[fade-up_0.22s_ease-out]">
 
-          {/* STEP 2 */}
-          {step === 2 && (
-            <div className="space-y-4">
-              {form.fixedBlocks.length === 0 && (
-                <p className="text-white/30 text-sm text-center py-2">
-                  Henüz sabit blok eklenmedi.
-                </p>
-              )}
-              {form.fixedBlocks.map((block, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5"
-                >
-                  <span className="flex-1 text-white text-sm truncate">{block.title}</span>
-                  <span className="text-white/40 text-xs shrink-0">
-                    {block.startTime} – {block.endTime}
-                  </span>
+            {/* ── STEP 1: Uyku Düzeni ── */}
+            {step === 1 && (
+              <div className="space-y-5">
+                <div>
+                  <p className="text-white/40 text-[11px] uppercase tracking-widest mb-3 font-medium">
+                    Hafta İçi
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-white/35 text-xs mb-1.5">Uyanma Saati</label>
+                      <input
+                        type="time"
+                        value={form.weekdayWakeUp}
+                        onChange={(e) => updateField('weekdayWakeUp', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white/35 text-xs mb-1.5">Uyuma Saati</label>
+                      <input
+                        type="time"
+                        value={form.weekdaySleep}
+                        onChange={(e) => updateField('weekdaySleep', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-white/40 text-[11px] uppercase tracking-widest mb-3 font-medium">
+                    Hafta Sonu
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-white/35 text-xs mb-1.5">Uyanma Saati</label>
+                      <input
+                        type="time"
+                        value={form.weekendWakeUp}
+                        onChange={(e) => updateField('weekendWakeUp', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white/35 text-xs mb-1.5">Uyuma Saati</label>
+                      <input
+                        type="time"
+                        value={form.weekendSleep}
+                        onChange={(e) => updateField('weekendSleep', e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 2: Sabit Bloklar ── */}
+            {step === 2 && (
+              <div className="space-y-3">
+                {form.fixedBlocks.length === 0 && (
+                  <p className="text-white/22 text-sm text-center py-2">
+                    Henüz sabit blok eklenmedi.
+                  </p>
+                )}
+                {form.fixedBlocks.map((block, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 bg-[#0e0e15] border border-[#222230] rounded-xl px-3 py-2.5"
+                  >
+                    <span className="flex-1 text-white text-sm truncate">{block.title}</span>
+                    <span className="text-white/35 text-xs shrink-0 font-mono tabular-nums">
+                      {block.startTime} – {block.endTime}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeBlock(i)}
+                      className="text-white/25 hover:text-red-400 transition-colors ml-1 text-lg leading-none cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                <div className="border-t border-[#1e1e28] pt-4 space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Başlık (örn. İş, Okul)"
+                    value={newBlock.title}
+                    onChange={(e) => setNewBlock((b) => ({ ...b, title: e.target.value }))}
+                    className={inputClass}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-white/35 text-xs mb-1.5">Başlangıç</label>
+                      <input
+                        type="time"
+                        value={newBlock.startTime}
+                        onChange={(e) =>
+                          setNewBlock((b) => ({ ...b, startTime: e.target.value }))
+                        }
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white/35 text-xs mb-1.5">Bitiş</label>
+                      <input
+                        type="time"
+                        value={newBlock.endTime}
+                        onChange={(e) =>
+                          setNewBlock((b) => ({ ...b, endTime: e.target.value }))
+                        }
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => removeBlock(i)}
-                    className="text-white/30 hover:text-red-400 transition-colors ml-1 text-lg leading-none"
+                    onClick={addBlock}
+                    disabled={!newBlock.title.trim()}
+                    className="w-full py-2.5 rounded-xl border border-[#28283f] text-white/45 hover:bg-[#14141e] hover:text-white/70 hover:border-[#383858] transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed text-sm cursor-pointer"
                   >
-                    ×
+                    + Ekle
                   </button>
                 </div>
-              ))}
+              </div>
+            )}
 
-              <div className="border-t border-white/10 pt-4 space-y-3">
-                <input
-                  type="text"
-                  placeholder="Başlık (örn. İş, Okul)"
-                  value={newBlock.title}
-                  onChange={(e) => setNewBlock((b) => ({ ...b, title: e.target.value }))}
-                  className={inputClass}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-white/50 text-xs mb-1.5">Başlangıç</label>
-                    <input
-                      type="time"
-                      value={newBlock.startTime}
-                      onChange={(e) => setNewBlock((b) => ({ ...b, startTime: e.target.value }))}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/50 text-xs mb-1.5">Bitiş</label>
-                    <input
-                      type="time"
-                      value={newBlock.endTime}
-                      onChange={(e) => setNewBlock((b) => ({ ...b, endTime: e.target.value }))}
-                      className={inputClass}
-                    />
-                  </div>
+            {/* ── STEP 3: Enerji Pikleri ── */}
+            {step === 3 && (
+              <div className="flex flex-wrap gap-2.5">
+                {ENERGY_PEAKS.map((peak) => (
+                  <button
+                    key={peak}
+                    type="button"
+                    onClick={() => toggleEnergyPeak(peak)}
+                    className={`${pillBase} ${
+                      form.energyPeaks.includes(peak) ? pillActive : pillInactive
+                    }`}
+                  >
+                    {peak}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── STEP 4: Serbest Günler ── */}
+            {step === 4 && (
+              <div className="flex flex-wrap gap-2.5">
+                {DAYS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => toggleFreeDay(value)}
+                    className={`${pillBase} ${
+                      form.freeDays.includes(value) ? pillActive : pillInactive
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── STEP 5: Rutin & Planlama ── */}
+            {step === 5 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-white/35 text-xs mb-1.5">Hafta Sonu Rutinin</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Sabahları spor yapıyorum, öğleden sonra dinleniyorum..."
+                    value={form.weekendRoutine}
+                    onChange={(e) => updateField('weekendRoutine', e.target.value)}
+                    className={`${inputClass} resize-none`}
+                  />
                 </div>
-                <button
-                  type="button"
-                  onClick={addBlock}
-                  disabled={!newBlock.title.trim()}
-                  className="w-full py-2.5 rounded-xl border border-white/20 text-white/70 hover:bg-white/10 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed text-sm"
-                >
-                  + Ekle
-                </button>
+                <div>
+                  <label className="block text-white/35 text-xs mb-1.5">Planlama Tarzın</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Esnek olmayı seviyorum, ama sabahları odaklanmak istiyorum..."
+                    value={form.planningStyle}
+                    onChange={(e) => updateField('planningStyle', e.target.value)}
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* STEP 3 */}
-          {step === 3 && (
-            <div className="flex flex-wrap gap-2.5">
-              {ENERGY_PEAKS.map((peak) => (
-                <button
-                  key={peak}
-                  type="button"
-                  onClick={() => toggleEnergyPeak(peak)}
-                  className={`${pillBase} ${form.energyPeaks.includes(peak) ? pillActive : pillInactive}`}
-                >
-                  {peak}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* STEP 4 */}
-          {step === 4 && (
-            <div className="flex flex-wrap gap-2.5">
-              {DAYS.map(({ label, value }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => toggleFreeDay(value)}
-                  className={`${pillBase} ${form.freeDays.includes(value) ? pillActive : pillInactive}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* STEP 5 */}
-          {step === 5 && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-white/50 text-xs mb-1.5">Hafta Sonu Rutinin</label>
-                <textarea
-                  rows={4}
-                  placeholder="Sabahları spor yapıyorum, öğleden sonra dinleniyorum..."
-                  value={form.weekendRoutine}
-                  onChange={(e) => updateField('weekendRoutine', e.target.value)}
-                  className={`${inputClass} resize-none`}
-                />
-              </div>
-              <div>
-                <label className="block text-white/50 text-xs mb-1.5">Planlama Tarzın</label>
-                <textarea
-                  rows={4}
-                  placeholder="Esnek olmayı seviyorum, ama sabahları odaklanmak istiyorum..."
-                  value={form.planningStyle}
-                  onChange={(e) => updateField('planningStyle', e.target.value)}
-                  className={`${inputClass} resize-none`}
-                />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Error */}
           {error && (
-            <p className="mt-4 text-red-400/80 text-sm text-center">{error}</p>
+            <p className="mt-4 text-red-400/85 text-sm text-center">{error}</p>
           )}
 
-          {/* Navigation */}
+          {/* ── Navigation ── */}
           <div className="flex justify-between mt-8 gap-3">
             {step > 1 ? (
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="flex-1 py-3 rounded-2xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all text-sm font-medium"
+                className="flex-1 py-3 rounded-2xl border border-[#28283a] bg-[#111117] text-white/60 hover:bg-[#18181f] hover:text-white/85 transition-all duration-200 text-sm font-medium cursor-pointer"
               >
                 Geri
               </button>
@@ -379,7 +436,11 @@ export default function OnboardingForm() {
               <button
                 type="button"
                 onClick={() => setStep((s) => s + 1)}
-                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-500/80 to-blue-500/80 hover:from-purple-500 hover:to-blue-500 text-white font-medium text-sm transition-all shadow-lg shadow-purple-500/20"
+                className="flex-1 py-3 rounded-2xl bg-violet-700 hover:bg-violet-600 text-white font-medium text-sm transition-all duration-200 cursor-pointer"
+                style={{
+                  boxShadow:
+                    '0 0 24px rgba(109,40,217,0.28), 0 1px 4px rgba(0,0,0,0.5)',
+                }}
               >
                 İleri
               </button>
@@ -388,7 +449,11 @@ export default function OnboardingForm() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-500/80 to-blue-500/80 hover:from-purple-500 hover:to-blue-500 text-white font-medium text-sm transition-all shadow-lg shadow-purple-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 py-3 rounded-2xl bg-violet-700 hover:bg-violet-600 text-white font-medium text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                style={{
+                  boxShadow:
+                    '0 0 24px rgba(109,40,217,0.28), 0 1px 4px rgba(0,0,0,0.5)',
+                }}
               >
                 {submitting ? 'Haftalık şablonun oluşturuluyor...' : 'Başla'}
               </button>

@@ -7,9 +7,6 @@ import type { BlockFormData } from './actions'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-/**
- * DB encoding: 0 = Monday ... 5 = Saturday, 6 = Sunday
- */
 const DAY_NAMES = [
   'Pazartesi',
   'Sali',
@@ -20,14 +17,15 @@ const DAY_NAMES = [
   'Pazar',
 ] as const
 
+/** Glass-tinted day badges — color + glass border */
 const DAY_COLORS = [
-  'bg-blue-500/15 text-blue-400',
-  'bg-indigo-500/15 text-indigo-400',
-  'bg-violet-500/15 text-violet-400',
-  'bg-purple-500/15 text-purple-400',
-  'bg-pink-500/15 text-pink-400',
-  'bg-rose-500/15 text-rose-400',
-  'bg-amber-500/15 text-amber-400',
+  'text-blue-400   bg-blue-500/10   border border-blue-500/25',
+  'text-indigo-400 bg-indigo-500/10 border border-indigo-500/25',
+  'text-violet-400 bg-violet-500/10 border border-violet-500/25',
+  'text-purple-400 bg-purple-500/10 border border-purple-500/25',
+  'text-pink-400   bg-pink-500/10   border border-pink-500/25',
+  'text-rose-400   bg-rose-500/10   border border-rose-500/25',
+  'text-amber-400  bg-amber-500/10  border border-amber-500/25',
 ] as const
 
 // ─── Form state ───────────────────────────────────────────────────────────────
@@ -44,7 +42,15 @@ const DEFAULT_FORM: FormState = {
   flexibility_score: 3,
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Glass design tokens ──────────────────────────────────────────────────────
+
+const glassInput =
+  'w-full px-3 py-2.5 text-sm text-white placeholder-white/20 rounded-xl ' +
+  'bg-white/[0.05] border border-white/[0.10] ' +
+  'focus:outline-none focus:border-violet-500/45 focus:ring-1 focus:ring-violet-500/15 ' +
+  'transition-all duration-200 [color-scheme:dark]'
+
+// ─── ScoreButtons ─────────────────────────────────────────────────────────────
 
 interface ScoreButtonsProps {
   value: number
@@ -65,12 +71,12 @@ function ScoreButtons({ value, onChange, disabled }: ScoreButtonsProps) {
             onClick={() => !disabled && onChange(n)}
             disabled={disabled}
             aria-pressed={isActive}
-            className={`w-9 h-9 text-xs rounded-lg font-semibold border transition-all
+            className={`w-9 h-9 text-xs rounded-lg font-semibold border transition-all duration-200 cursor-pointer
               ${isActive
-                ? 'bg-neutral-700 text-white border-neutral-600'
-                : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:bg-neutral-700 hover:text-white'
+                ? 'text-white border-violet-500/50 bg-violet-600/25 shadow-[0_0_10px_rgba(139,92,246,0.18)]'
+                : 'text-white/35 border-white/[0.10] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white/65 hover:border-white/[0.15]'
               }
-              ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+              ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
           >
             {n}
           </button>
@@ -79,6 +85,8 @@ function ScoreButtons({ value, onChange, disabled }: ScoreButtonsProps) {
     </div>
   )
 }
+
+// ─── ToggleSwitch ─────────────────────────────────────────────────────────────
 
 interface ToggleSwitchProps {
   checked: boolean
@@ -94,19 +102,22 @@ function ToggleSwitch({ checked, onChange, disabled }: ToggleSwitchProps) {
       aria-checked={checked}
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200
-        ${checked ? 'bg-red-500' : 'bg-neutral-700'}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      className={`relative w-11 h-6 rounded-full transition-all duration-300 cursor-pointer
+        ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+      style={{
+        background: checked ? 'rgba(239,68,68,0.75)' : 'rgba(255,255,255,0.10)',
+        boxShadow: checked ? '0 0 14px rgba(239,68,68,0.3)' : 'none',
+      }}
     >
       <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200
-          ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full shadow-sm transition-all duration-300
+          ${checked ? 'translate-x-5 bg-white' : 'translate-x-0 bg-white/75'}`}
       />
     </button>
   )
 }
 
-// ─── Block Card ───────────────────────────────────────────────────────────────
+// ─── BlockCard ────────────────────────────────────────────────────────────────
 
 interface BlockCardProps {
   block: SkeletonBlock
@@ -120,9 +131,16 @@ function BlockCard({ block, onEdit, onDelete, isDeleting, isPending }: BlockCard
   return (
     <div
       className={`flex items-center justify-between gap-3 px-3.5 py-3
-        bg-neutral-800 border border-neutral-700 rounded-xl
-        transition-all duration-200
-        ${isDeleting ? 'opacity-30 scale-95' : 'opacity-100 scale-100'}`}
+        backdrop-blur-sm border rounded-xl
+        transition-all duration-300
+        ${isDeleting
+          ? 'opacity-20 scale-95'
+          : 'opacity-100 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
+        }`}
+      style={{
+        background: 'rgba(255,255,255,0.06)',
+        borderColor: isDeleting ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.10)',
+      }}
     >
       {/* Left: title + time */}
       <div className="flex items-start gap-2 min-w-0">
@@ -138,7 +156,7 @@ function BlockCard({ block, onEdit, onDelete, isDeleting, isPending }: BlockCard
           <p className="text-sm font-medium text-white truncate leading-snug">
             {block.title}
           </p>
-          <p className="text-xs text-neutral-500 mt-0.5 font-mono tabular-nums">
+          <p className="text-xs text-white/30 mt-0.5 font-mono tabular-nums">
             {block.start_time.slice(0, 5)} - {block.end_time.slice(0, 5)}
           </p>
         </div>
@@ -146,22 +164,19 @@ function BlockCard({ block, onEdit, onDelete, isDeleting, isPending }: BlockCard
 
       {/* Right: score badges + actions */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Energy */}
-        <span className="hidden sm:flex items-center gap-0.5 text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded tabular-nums">
+        <span className="hidden sm:flex items-center text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded tabular-nums">
           E {block.energy_cost}
         </span>
-        {/* Flexibility */}
-        <span className="hidden sm:flex items-center gap-0.5 text-[10px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded tabular-nums">
+        <span className="hidden sm:flex items-center text-[10px] font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded tabular-nums">
           F {block.flexibility_score}
         </span>
 
-        {/* Buttons */}
         <button
           type="button"
           onClick={onEdit}
           disabled={isPending}
-          className="text-xs text-neutral-400 hover:text-white border border-neutral-700 hover:border-neutral-500 hover:bg-neutral-700
-            px-2.5 py-1 rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs text-white/35 hover:text-white border border-white/[0.10] hover:border-white/[0.22] hover:bg-white/[0.06]
+            px-2.5 py-1 rounded transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           Duzenle
         </button>
@@ -169,8 +184,8 @@ function BlockCard({ block, onEdit, onDelete, isDeleting, isPending }: BlockCard
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          className="text-xs text-neutral-500 hover:text-red-400 border border-neutral-700 hover:border-red-500/30 hover:bg-red-500/10
-            px-2.5 py-1 rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs text-white/30 hover:text-red-400 border border-white/[0.10] hover:border-red-500/30 hover:bg-red-500/10
+            px-2.5 py-1 rounded transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           Sil
         </button>
@@ -179,7 +194,7 @@ function BlockCard({ block, onEdit, onDelete, isDeleting, isPending }: BlockCard
   )
 }
 
-// ─── Block Form Modal ─────────────────────────────────────────────────────────
+// ─── BlockModal ───────────────────────────────────────────────────────────────
 
 interface BlockModalProps {
   isEditing: boolean
@@ -191,15 +206,7 @@ interface BlockModalProps {
   onSubmit: () => void
 }
 
-function BlockModal({
-  isEditing,
-  form,
-  setForm,
-  isPending,
-  error,
-  onClose,
-  onSubmit,
-}: BlockModalProps) {
+function BlockModal({ isEditing, form, setForm, isPending, error, onClose, onSubmit }: BlockModalProps) {
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => {
       const next = { ...prev, [key]: value }
@@ -214,28 +221,37 @@ function BlockModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4
-        bg-black/60"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="w-full sm:max-w-md bg-neutral-900 border border-neutral-800
-          rounded-t-xl sm:rounded-xl overflow-y-auto max-h-[92svh] sm:max-h-[90vh]"
+        className="w-full sm:max-w-md backdrop-blur-2xl border
+          rounded-t-2xl sm:rounded-2xl overflow-y-auto max-h-[92svh] sm:max-h-[90vh]
+          animate-[fade-up_0.2s_ease-out]"
+        style={{
+          background: 'rgba(8,8,14,0.90)',
+          borderColor: 'rgba(255,255,255,0.09)',
+          boxShadow: '0 28px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.04)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-neutral-800">
+        <div
+          className="flex items-center justify-between px-5 pt-5 pb-4 border-b"
+          style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        >
           <h3 className="text-base font-semibold text-white">
             {isEditing ? 'Bloku Duzenle' : 'Yeni Blok Ekle'}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-neutral-500 hover:text-white transition-colors text-lg leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-800"
+            className="text-white/35 hover:text-white transition-colors text-lg leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.07] cursor-pointer"
           >
-            x
+            ×
           </button>
         </div>
 
@@ -243,38 +259,34 @@ function BlockModal({
         <div className="px-5 py-4 space-y-4">
           {/* Gorev Adi */}
           <div>
-            <label className="block text-xs font-medium text-neutral-400 mb-1.5">Gorev Adi</label>
+            <label className="block text-xs font-medium text-white/40 mb-1.5">Gorev Adi</label>
             <input
               type="text"
               value={form.title}
               onChange={(e) => update('title', e.target.value)}
               placeholder="Sabah egzersizi, Ders calisma..."
               autoFocus
-              className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
-                focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
-                placeholder-neutral-600 transition-all"
+              className={glassInput}
             />
           </div>
 
           {/* Gun */}
           <div>
-            <label className="block text-xs font-medium text-neutral-400 mb-1.5">Gun</label>
+            <label className="block text-xs font-medium text-white/40 mb-1.5">Gun</label>
             <div className="relative">
               <select
                 value={form.day_of_week}
                 onChange={(e) => update('day_of_week', Number(e.target.value))}
-                className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
-                  focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
-                  appearance-none cursor-pointer transition-all"
+                className={`${glassInput} appearance-none cursor-pointer`}
               >
                 {DAY_NAMES.map((name, i) => (
-                  <option key={i} value={i} className="bg-neutral-800 text-white">
+                  <option key={i} value={i} style={{ background: '#0d0d14', color: '#fff' }}>
                     {name}
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-xs">
-                v
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-xs">
+                ▾
               </span>
             </div>
           </div>
@@ -282,34 +294,38 @@ function BlockModal({
           {/* Saatler */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1.5">Baslangic</label>
+              <label className="block text-xs font-medium text-white/40 mb-1.5">Baslangic</label>
               <input
                 type="time"
                 value={form.start_time}
                 onChange={(e) => update('start_time', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
-                  focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
-                  transition-all"
+                className={glassInput}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1.5">Bitis</label>
+              <label className="block text-xs font-medium text-white/40 mb-1.5">Bitis</label>
               <input
                 type="time"
                 value={form.end_time}
                 onChange={(e) => update('end_time', e.target.value)}
-                className="w-full px-3 py-2.5 text-sm bg-neutral-800 border border-neutral-700 text-white rounded-lg
-                  focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600
-                  transition-all"
+                className={glassInput}
               />
             </div>
           </div>
 
           {/* Sabit Gorev Toggle */}
-          <div className="flex items-center justify-between px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl">
+          <div
+            className="flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              borderColor: form.is_hard_constraint
+                ? 'rgba(239,68,68,0.25)'
+                : 'rgba(255,255,255,0.09)',
+            }}
+          >
             <div>
-              <p className="text-xs font-medium text-neutral-300">Sabit Gorev</p>
-              <p className="text-xs text-neutral-500 mt-0.5">
+              <p className="text-xs font-medium text-white/75">Sabit Gorev</p>
+              <p className="text-xs text-white/30 mt-0.5">
                 Ders, staj, randevu gibi kaydirilamaz bloklar
               </p>
             </div>
@@ -322,8 +338,8 @@ function BlockModal({
           {/* Enerji Maliyeti */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium text-neutral-400">Enerji Maliyeti</label>
-              <span className="text-xs text-amber-400 font-medium">
+              <label className="text-xs font-medium text-white/40">Enerji Maliyeti</label>
+              <span className="text-xs text-amber-400/80 font-medium">
                 {['', 'Cok Dusuk', 'Dusuk', 'Orta', 'Yuksek', 'Cok Yuksek'][form.energy_cost]}
               </span>
             </div>
@@ -338,15 +354,19 @@ function BlockModal({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label
-                className={`text-xs font-medium ${form.is_hard_constraint ? 'text-neutral-600' : 'text-neutral-400'}`}
+                className={`text-xs font-medium ${
+                  form.is_hard_constraint ? 'text-white/20' : 'text-white/40'
+                }`}
               >
                 Esneklik Skoru
                 {form.is_hard_constraint && (
-                  <span className="ml-1.5 text-red-400 font-normal">(sabit gorevde 1&apos;e kilitlendi)</span>
+                  <span className="ml-1.5 text-red-400/60 font-normal">(sabit gorevde 1&apos;e kilitlendi)</span>
                 )}
               </label>
               <span
-                className={`text-xs font-medium ${form.is_hard_constraint ? 'text-neutral-600' : 'text-cyan-400'}`}
+                className={`text-xs font-medium ${
+                  form.is_hard_constraint ? 'text-white/20' : 'text-cyan-400/80'
+                }`}
               >
                 {['', 'Kesinlikle bu saatte', 'Cok az esneklik', 'Orta esneklik', 'Esnek', 'Tam esnek'][form.flexibility_score]}
               </span>
@@ -361,21 +381,34 @@ function BlockModal({
 
           {/* Error */}
           {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5">
-              <span className="text-red-400 mt-0.5 shrink-0">!</span>
-              <p className="text-xs text-red-400">{error}</p>
+            <div
+              className="flex items-start gap-2 rounded-xl px-3 py-2.5"
+              style={{
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.25)',
+              }}
+            >
+              <span className="text-red-400 mt-0.5 shrink-0 text-xs">!</span>
+              <p className="text-xs text-red-400/85">{error}</p>
             </div>
           )}
         </div>
 
         {/* Modal footer */}
-        <div className="flex gap-2 px-5 pb-5 pt-3 border-t border-neutral-800">
+        <div
+          className="flex gap-2 px-5 pb-5 pt-3 border-t"
+          style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        >
           <button
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="flex-1 py-2.5 text-sm text-neutral-300 bg-neutral-800 hover:bg-neutral-700
-              rounded-xl transition-colors disabled:opacity-50 font-medium"
+            className="flex-1 py-2.5 text-sm font-medium text-white/55 hover:text-white
+              rounded-xl transition-all duration-200 disabled:opacity-40 cursor-pointer"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.09)',
+            }}
           >
             Iptal
           </button>
@@ -383,12 +416,20 @@ function BlockModal({
             type="button"
             onClick={onSubmit}
             disabled={isSubmitDisabled}
-            className="flex-1 py-2.5 text-sm text-white bg-neutral-700 hover:bg-neutral-600
-              rounded-xl transition-colors disabled:opacity-50 font-medium"
+            className="flex-1 py-2.5 text-sm font-medium text-white
+              rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            style={{
+              background: isSubmitDisabled ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.35)',
+              border: '1px solid rgba(139,92,246,0.40)',
+              boxShadow: isSubmitDisabled ? 'none' : '0 0 16px rgba(139,92,246,0.18)',
+            }}
           >
             {isPending ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-neutral-500 border-t-white rounded-full animate-spin" />
+                <span
+                  className="w-3.5 h-3.5 border-2 rounded-full animate-spin"
+                  style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: '#fff' }}
+                />
                 Kaydediliyor...
               </span>
             ) : isEditing ? (
@@ -414,7 +455,10 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
 
   const [optimisticBlocks, dispatchOptimistic] = useOptimistic(
     initialBlocks,
-    (state: SkeletonBlock[], action: { type: 'delete'; id: string } | { type: 'update'; block: SkeletonBlock }) => {
+    (
+      state: SkeletonBlock[],
+      action: { type: 'delete'; id: string } | { type: 'update'; block: SkeletonBlock }
+    ) => {
       if (action.type === 'delete') return state.filter((b) => b.id !== action.id)
       if (action.type === 'update') return state.map((b) => (b.id === action.block.id ? action.block : b))
       return state
@@ -458,7 +502,6 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
 
   function handleSubmit() {
     setFormError(null)
-
     const payload: BlockFormData = {
       ...form,
       flexibility_score: form.is_hard_constraint ? 1 : form.flexibility_score,
@@ -489,9 +532,7 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
 
   function handleDelete(block: SkeletonBlock) {
     if (!confirm(`"${block.title}" blogunu silmek istediginizden emin misiniz?\n\nBu islem geri alinamaz.`)) return
-
     setDeletingId(block.id)
-
     startTransition(async () => {
       dispatchOptimistic({ type: 'delete', id: block.id })
       try {
@@ -515,16 +556,48 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
 
   return (
     <>
-      {/* Page */}
-      <div className="max-w-2xl mx-auto">
+      {/* ── Background bloom orbs ── */}
+      <div className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden">
+        {/* Top-right — indigo */}
+        <div
+          className="absolute -top-48 -right-48 w-[52vw] h-[52vw] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(99,102,241,0.13) 0%, transparent 65%)',
+            filter: 'blur(48px)',
+            animation: 'bloom-pulse 9s ease-in-out infinite',
+          }}
+        />
+        {/* Bottom-left — violet */}
+        <div
+          className="absolute -bottom-64 -left-48 w-[60vw] h-[60vw] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(139,92,246,0.10) 0%, transparent 65%)',
+            filter: 'blur(60px)',
+            animation: 'bloom-pulse 12s ease-in-out infinite 3.5s',
+          }}
+        />
+        {/* Center — blue accent */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[38vw] h-[38vw] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 65%)',
+            filter: 'blur(56px)',
+            animation: 'bloom-pulse 15s ease-in-out infinite 6s',
+          }}
+        />
+      </div>
+
+      {/* ── Page ── */}
+      <div className="relative z-10 max-w-2xl mx-auto">
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-white tracking-tight">Haftalik Sablon</h2>
-            <p className="text-sm text-neutral-500 mt-0.5">
+            <p className="text-sm text-white/30 mt-0.5">
               {totalBlocks} blok
               {hardBlocks > 0 && (
-                <span className="ml-2 text-red-400">/ {hardBlocks} sabit</span>
+                <span className="ml-2 text-red-400/75">/ {hardBlocks} sabit</span>
               )}
             </p>
           </div>
@@ -532,9 +605,13 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
             type="button"
             onClick={openCreate}
             disabled={isPending}
-            className="flex items-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700
-              text-sm font-medium px-4 py-2.5 rounded-xl transition-colors
-              disabled:opacity-50"
+            className="flex items-center gap-1.5 text-white text-sm font-medium px-4 py-2.5 rounded-xl
+              backdrop-blur-sm transition-all duration-300 disabled:opacity-40 cursor-pointer
+              hover:shadow-[0_0_22px_rgba(139,92,246,0.25)]"
+            style={{
+              background: 'rgba(139,92,246,0.16)',
+              border: '1px solid rgba(139,92,246,0.32)',
+            }}
           >
             <span className="text-base leading-none">+</span>
             Yeni Blok
@@ -544,22 +621,28 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
         {/* Stat cards */}
         {totalBlocks > 0 && (
           <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-center">
-              <p className="text-xl font-semibold text-white tabular-nums">{totalBlocks}</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Toplam Blok</p>
-            </div>
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-center">
-              <p className="text-xl font-semibold text-red-400 tabular-nums">{hardBlocks}</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Sabit</p>
-            </div>
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-center">
-              <p className="text-xl font-semibold text-green-400 tabular-nums">{totalBlocks - hardBlocks}</p>
-              <p className="text-xs text-neutral-500 mt-0.5">Esnek</p>
-            </div>
+            {[
+              { val: totalBlocks, label: 'Toplam Blok', color: 'text-white' },
+              { val: hardBlocks, label: 'Sabit', color: 'text-red-400' },
+              { val: totalBlocks - hardBlocks, label: 'Esnek', color: 'text-emerald-400' },
+            ].map(({ val, label, color }) => (
+              <div
+                key={label}
+                className="backdrop-blur-md rounded-2xl px-4 py-3 text-center transition-all duration-300
+                  hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                <p className={`text-xl font-semibold tabular-nums ${color}`}>{val}</p>
+                <p className="text-xs text-white/30 mt-0.5">{label}</p>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Days */}
+        {/* Day columns */}
         <div className="space-y-3">
           {DAY_NAMES.map((dayName, dayIndex) => {
             const dayBlocks = blocksByDay[dayIndex]
@@ -568,19 +651,20 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
             return (
               <div
                 key={dayIndex}
-                className="bg-neutral-900 border border-neutral-800 rounded-xl p-4"
+                className="backdrop-blur-md rounded-2xl p-4 transition-all duration-300
+                  hover:shadow-[0_8px_32px_rgba(0,0,0,0.28)]"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
               >
                 {/* Day header */}
                 <div className="flex items-center gap-2 mb-3">
-                  <span
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${colorClass}`}
-                  >
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${colorClass}`}>
                     {dayName}
                   </span>
-                  <span className="text-xs text-neutral-600">
-                    {dayBlocks.length > 0
-                      ? `${dayBlocks.length} blok`
-                      : 'bos'}
+                  <span className="text-xs text-white/22">
+                    {dayBlocks.length > 0 ? `${dayBlocks.length} blok` : 'bos'}
                   </span>
                 </div>
 
@@ -599,7 +683,7 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-neutral-700 pl-1">
+                  <p className="text-xs text-white/18 pl-1">
                     Bu gun icin henuz blok eklenmedi
                   </p>
                 )}
@@ -610,9 +694,15 @@ export default function TemplateManager({ blocks: initialBlocks }: TemplateManag
 
         {/* Empty state */}
         {totalBlocks === 0 && (
-          <div className="mt-4 bg-neutral-900 border border-dashed border-neutral-700 rounded-xl p-10 text-center">
-            <p className="text-neutral-400 text-sm">Henuz haftalik sablon olusturulmadi.</p>
-            <p className="text-neutral-600 text-xs mt-1.5">
+          <div
+            className="mt-4 backdrop-blur-md rounded-2xl p-10 text-center"
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px dashed rgba(255,255,255,0.08)',
+            }}
+          >
+            <p className="text-white/35 text-sm">Henuz haftalik sablon olusturulmadi.</p>
+            <p className="text-white/18 text-xs mt-1.5">
               Yukaridaki &ldquo;+ Yeni Blok&rdquo; butonuyla ilk blogunu ekleyebilirsin.
             </p>
           </div>

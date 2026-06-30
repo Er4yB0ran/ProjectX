@@ -1,0 +1,217 @@
+{
+  "main": {
+    "id": "e7b6575c78c86824",
+    "type": "split",
+    "children": [
+      {
+        "id": "4d847205d15af991",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a2e8a3c32801b3b9",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "925e4351d39c292f",
+    "type": "split",
+    "children": [
+      {
+        "id": "fc55440a3dc4e2a5",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ffdb974821987dcb",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "f70832ead4d93e60",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "94b08e51b138ce2f",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "effbd4a4814de6dc",
+    "type": "split",
+    "children": [
+      {
+        "id": "e81366b2d94598ed",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a12b30abc433a95d",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "ff7ac3ce9d1390a9",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "27c359ea1ec9a1e1",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "e4da72726c952ca2",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "22fc18120c314bfa",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "ffdb974821987dcb",
+  "lastOpenFiles": [
+    "Untitled",
+    "node_modules/next/dist/docs/01-app/04-glossary.md",
+    "supabase/migrations/20260616_add_plan_to_profiles.sql",
+    "src/app/(dashboard)/upgrade/page.tsx",
+    "src/app/(dashboard)/upgrade/page.tsx.tmp.22820.23c3cf33452f",
+    "src/app/(dashboard)/upgrade",
+    "src/app/api/payment/callback/route.ts",
+    "src/app/api/payment/callback/route.ts.tmp.22820.8a2a5b2792af",
+    "src/app/api/payment/callback",
+    "src/app/api/payment/create/route.ts",
+    "src/app/api/payment/create",
+    "src/app/api/payment",
+    "node_modules/iyzipay/samples/images/image.png",
+    "node_modules/http-signature/README.md",
+    "node_modules/smart-buffer/docs/ROADMAP.md",
+    "node_modules/smart-buffer/docs/README_v3.md",
+    "node_modules/smart-buffer/docs/CHANGELOG.md",
+    "node_modules/jsprim/CHANGES.md",
+    "node_modules/safe-buffer/README.md",
+    "node_modules/mime-types/HISTORY.md",
+    "node_modules/bluebird/changelog.md",
+    "node_modules/getpass/README.md",
+    "node_modules/jsbn/README.md",
+    "node_modules/tweetnacl/README.md",
+    "node_modules/@postman/tunnel-agent/README.md",
+    "_BrainMap/09 - 📁 Dosya Haritası.md",
+    "_BrainMap/08 - 🤖 AI Entegrasyonu.md",
+    "_BrainMap/07 - 🎨 Tasarım Sistemi.md",
+    "_BrainMap/06 - ⚡ Server Actions & API.md",
+    "_BrainMap/05 - 🧩 Bileşenler.md",
+    "_BrainMap/04 - 🔄 Kullanıcı Akışları.md",
+    "_BrainMap/03 - 🗄️ Veritabanı.md",
+    "_BrainMap/02 - 🏗️ Mimari.md",
+    "_BrainMap/01 - 🎯 Proje Vizyonu.md",
+    "_BrainMap/00 - 🧠 Ana Hub.md"
+  ]
+}
