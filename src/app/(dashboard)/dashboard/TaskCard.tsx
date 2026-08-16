@@ -1,14 +1,21 @@
 'use client'
 
-import { useTransition, useOptimistic } from 'react'
+import { useState, useTransition, useOptimistic } from 'react'
 import { updateTaskStatus, rescheduleTask } from './actions'
+import { deleteTask } from '../tasks/actions'
 import type { Task, TaskStatus } from '@/types/supabase'
+import { formatShortDate } from '@/lib/date'
+
+const DEV_BYPASS = process.env.NEXT_PUBLIC_DEV_BYPASS === 'true'
+
+const TIME_LOCK_GRACE_MS = 15 * 60 * 1000
 
 /**
  * Zaman Kilidi (Anti-Cheat) — Gorevin baslangic zamani henuz gelmediyse true doner.
  *
  * Kural:
- *  - start_time varsa: task_date + start_time (yerel saat) > su an -> kilitli
+ *  - start_time varsa: task_date + start_time (yerel saat) - 15dk > su an -> kilitli
+ *    (15 dakikalik tolerans: kullanici gorevi biraz erken isaretleyebilir.)
  *  - start_time yoksa: task_date > bugunun tarihi -> kilitli
  *    (Bugunun tarihindeki saat-bilgisiz gorevler her zaman erisebilirdir.)
  */
@@ -17,7 +24,7 @@ function isTimeLocked(taskDate: string, startTime: string | null): boolean {
 
   if (startTime) {
     const taskStart = new Date(`${taskDate}T${startTime}`)
-    return taskStart > now
+    return taskStart.getTime() - TIME_LOCK_GRACE_MS > now.getTime()
   }
 
   const todayStr = now.toLocaleDateString('sv-SE')
@@ -82,9 +89,25 @@ function ActionButton({ label, onClick, disabled, active, variant }: ActionButto
   )
 }
 
+function DeleteButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title="Sil"
+      aria-label="Görevi sil"
+      className="text-neutral-600 hover:text-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm leading-none w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/10 shrink-0"
+    >
+      ×
+    </button>
+  )
+}
+
 export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boolean }) {
   const [isPending, startTransition] = useTransition()
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(task.status)
+  const [isRemoved, setIsRemoved] = useState(false)
 
   function handleStatus(status: TaskStatus) {
     startTransition(async () => {
@@ -100,8 +123,37 @@ export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boole
     })
   }
 
+  function handleDelete() {
+    const isManual = task.skeleton_block_id === null
+
+    if (
+      isManual &&
+      !window.confirm(`"${task.title}" görevini kalıcı olarak silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz.`)
+    )
+      return
+
+    startTransition(async () => {
+      if (isManual) {
+        setIsRemoved(true)
+      } else {
+        setOptimisticStatus('cancelled')
+      }
+      try {
+        await deleteTask(task.id)
+      } catch (err) {
+        if (isManual) setIsRemoved(false)
+        console.error('Görev silinemedi:', err)
+      }
+    })
+  }
+
+  if (isRemoved) return null
+
   const isCancelled = optimisticStatus === 'cancelled'
-  const timeLocked = isTimeLocked(task.task_date, task.start_time)
+  const reallyTimeLocked = isTimeLocked(task.task_date, task.start_time)
+  const timeLocked = DEV_BYPASS ? false : reallyTimeLocked
+  const isRescheduled = task.status === 'rescheduled' && task.task_date !== task.original_date
+  const isSplitContinuation = task.linked_task_id != null
 
   return (
     <div
@@ -130,19 +182,36 @@ export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boole
               <p className="text-xs text-neutral-500 mt-0.5 tabular-nums">
                 {task.start_time.slice(0, 5)}
                 {task.end_time ? ` - ${task.end_time.slice(0, 5)}` : ''}
-                {optimisticStatus === 'rescheduled' && (
+                {optimisticStatus === 'rescheduled' && !isRescheduled && (
                   <span className="ml-1.5 text-amber-500/50 text-[11px]">~</span>
                 )}
               </p>
             )}
 
-            {!task.start_time && optimisticStatus === 'rescheduled' && (
+            {!task.start_time && optimisticStatus === 'rescheduled' && !isRescheduled && (
               <span className="text-[10px] text-amber-500/50 leading-none mt-0.5 block">~</span>
             )}
 
             {/* Metric badges */}
-            {!isCancelled && (task.energy_cost != null || task.flexibility_score != null) && (
+            {!isCancelled &&
+              (isRescheduled ||
+                isSplitContinuation ||
+                task.energy_cost != null ||
+                task.flexibility_score != null) && (
               <div className="flex items-center gap-1.5 mt-1.5">
+                {isRescheduled && (
+                  <span className="text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded tabular-nums">
+                    → {formatShortDate(task.task_date)}
+                  </span>
+                )}
+                {isSplitContinuation && (
+                  <span
+                    title="Bu görev, ertelenirken ikiye bölündü"
+                    className="text-[10px] font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded"
+                  >
+                    ⇢ 2/2 devamı
+                  </span>
+                )}
                 {task.energy_cost != null && (
                   <span className="text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded tabular-nums">
                     E {task.energy_cost}
@@ -159,9 +228,9 @@ export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boole
         </div>
 
         {/* Right: action buttons */}
-        {!isCancelled && (
-          <div className="flex items-center gap-1.5 shrink-0">
-            {timeLocked ? (
+        <div className="flex items-center gap-1.5 shrink-0">
+          {!isCancelled &&
+            (timeLocked ? (
               <span
                 title="Bu gorevin saati henuz gelmedi"
                 className="text-xs text-neutral-700 select-none tabular-nums"
@@ -171,6 +240,14 @@ export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boole
               </span>
             ) : (
               <>
+                {reallyTimeLocked && (
+                  <span
+                    title="Saati gelmedi ama DEV modunda kilit açık"
+                    className="text-[9px] text-amber-500/60 select-none mr-0.5"
+                  >
+                    DEV
+                  </span>
+                )}
                 <ActionButton
                   label="Yaptim"
                   onClick={() => handleStatus('completed')}
@@ -195,9 +272,9 @@ export default function TaskCard({ task, isFixed }: { task: Task; isFixed: boole
                   variant="red"
                 />
               </>
-            )}
-          </div>
-        )}
+            ))}
+          <DeleteButton onClick={handleDelete} disabled={isPending} />
+        </div>
       </div>
     </div>
   )

@@ -74,23 +74,30 @@ Sade, mekanik, motivasyon jargonu yok.
 
 ## 🗓️ Kullanıcı Yolculuğu
 
-```mermaid
-journey
-    title ProjectX Kullanıcı Yolculuğu
-    section İlk Kullanım
-      Kayıt Ol: 5: Kullanıcı
-      Email Onayla: 3: Kullanıcı
-      Onboarding (5 adım): 4: Kullanıcı
-      AI Şablon Üretir: 5: Sistem
-    section Günlük Kullanım
-      Panoyu Aç: 5: Kullanıcı
-      Görevleri Gör: 5: Kullanıcı
-      Tamamla / Ertele: 4: Kullanıcı
-      Günü Kapat (AI): 4: Sistem
-    section Haftalık
-      Şablonu Düzenle: 3: Kullanıcı
-      Yeni Blok Ekle: 4: Kullanıcı
-```
+### 1️⃣ İlk Kullanım
+
+| Adım | Aktör | Memnuniyet |
+|------|-------|------------|
+| Kayıt Ol | 🧑 Kullanıcı | ⭐⭐⭐⭐⭐ |
+| Email Onayla | 🧑 Kullanıcı | ⭐⭐⭐ |
+| Onboarding (5 adım) | 🧑 Kullanıcı | ⭐⭐⭐⭐ |
+| AI Şablon Üretir | 🤖 Sistem | ⭐⭐⭐⭐⭐ |
+
+### 2️⃣ Günlük Kullanım
+
+| Adım | Aktör | Memnuniyet |
+|------|-------|------------|
+| Panoyu Aç | 🧑 Kullanıcı | ⭐⭐⭐⭐⭐ |
+| Görevleri Gör | 🧑 Kullanıcı | ⭐⭐⭐⭐⭐ |
+| Tamamla / Ertele | 🧑 Kullanıcı | ⭐⭐⭐⭐ |
+| Günü Kapat (AI) | 🤖 Sistem | ⭐⭐⭐⭐ |
+
+### 3️⃣ Haftalık
+
+| Adım | Aktör | Memnuniyet |
+|------|-------|------------|
+| Şablonu Düzenle | 🧑 Kullanıcı | ⭐⭐⭐ |
+| Yeni Blok Ekle | 🧑 Kullanıcı | ⭐⭐⭐⭐ |
 
 ---
 

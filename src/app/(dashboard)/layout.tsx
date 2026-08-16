@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
+import SidebarNav from '@/components/SidebarNav'
 
 export default async function DashboardLayout({
   children,
@@ -16,7 +16,7 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_completed')
+    .select('onboarding_completed, is_admin')
     .eq('id', user.id)
     .single()
 
@@ -30,39 +30,14 @@ export default async function DashboardLayout({
           <p className="text-xs text-neutral-500 truncate mt-0.5">{user.email}</p>
         </div>
 
-        <ul className="space-y-0.5 flex-1">
-          <li>
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
-            >
-              Bugun
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/template"
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
-            >
-              Haftalik Sablon
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/tasks"
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
-            >
-              Gorevler
-            </Link>
-          </li>
-        </ul>
+        <SidebarNav isAdmin={profile.is_admin} />
 
         <form action="/auth/signout" method="post">
           <button
             type="submit"
             className="w-full text-left px-3 py-2 rounded-lg text-sm text-neutral-600 hover:bg-neutral-800 hover:text-neutral-300 transition-colors"
           >
-            Cikis yap
+            Çıkış yap
           </button>
         </form>
       </nav>

@@ -1,0 +1,14 @@
+/* Mermaid diyagramlarını (örn. Kullanıcı Yolculuğu) daha büyük ve okunabilir göster. */
+
+.markdown-rendered .mermaid,
+.markdown-preview-view .mermaid,
+.markdown-source-view.mod-cm6 .mermaid {
+  overflow-x: auto;
+}
+
+.markdown-rendered .mermaid svg,
+.markdown-preview-view .mermaid svg,
+.markdown-source-view.mod-cm6 .mermaid svg {
+  max-width: none !important;
+  zoom: 1.8;
+}

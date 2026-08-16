@@ -22,7 +22,7 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email: e, password: p })
     if (error) {
-      setError(error.message)
+      setError(error.message || 'Giriş başarısız. Supabase erişilemiyor olabilir.')
       setLoading(false)
       return
     }
