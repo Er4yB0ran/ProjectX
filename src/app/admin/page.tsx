@@ -1,15 +1,25 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import AiChatConfigCard from './AiChatConfigCard'
+import AiChatUsageSummaryCard from './AiChatUsageSummaryCard'
 
 export default async function AdminUsersPage() {
   const supabase = await createClient()
 
-  const { data: users, error } = await supabase.rpc('admin_list_users')
+  const [{ data: users, error }, { data: config }, { data: usageSummary, error: usageError }] = await Promise.all([
+    supabase.rpc('admin_list_users'),
+    supabase.from('app_config').select('value').eq('key', 'ai_chat_enabled').single(),
+    supabase.rpc('admin_ai_chat_usage_summary').single(),
+  ])
 
   if (error) throw new Error(`Kullanıcılar yüklenemedi: ${error.message}`)
+  if (usageError) throw new Error(`Kullanım özeti yüklenemedi: ${usageError.message}`)
 
   return (
     <div className="max-w-5xl mx-auto">
+      <AiChatConfigCard initialEnabled={config?.value === true} />
+      <AiChatUsageSummaryCard summary={usageSummary ?? null} />
+
       <h2 className="text-xl font-semibold text-white mb-6">Kullanıcılar</h2>
 
       {users && users.length > 0 ? (

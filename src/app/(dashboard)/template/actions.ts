@@ -1,44 +1,10 @@
 'use server'
 
-import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { BlockSchema, applyBusinessRules, normalizeTime, type BlockFormData } from '@/lib/skeletonBlock'
 
-// ─── Validation Schema ───────────────────────────────────────────────────────
-
-const BlockSchema = z.object({
-  title: z.string().min(1, 'Görev adı zorunludur').max(200, 'Görev adı en fazla 200 karakter olabilir'),
-  day_of_week: z.number().int().min(0).max(6),
-  start_time: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Geçerli bir saat formatı girin (SS:DD)'),
-  end_time: z
-    .string()
-    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Geçerli bir saat formatı girin (SS:DD)'),
-  is_hard_constraint: z.boolean(),
-  energy_cost: z.number().int().min(1).max(5),
-  flexibility_score: z.number().int().min(1).max(5),
-})
-
-export type BlockFormData = z.infer<typeof BlockSchema>
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/** HTML <input type="time"> produces "HH:MM" — DB needs "HH:MM:SS" */
-function normalizeTime(t: string): string {
-  return t.length === 5 ? `${t}:00` : t
-}
-
-/**
- * Core logic rule: is_hard_constraint = true → flexibility_score is always 1.
- * Enforce here in case client bypasses the UI restriction.
- */
-function applyBusinessRules(data: BlockFormData): BlockFormData {
-  if (data.is_hard_constraint) {
-    return { ...data, flexibility_score: 1 }
-  }
-  return data
-}
+export type { BlockFormData }
 
 // ─── Server Actions ───────────────────────────────────────────────────────────
 

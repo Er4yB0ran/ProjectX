@@ -103,3 +103,124 @@ ai chat sınırı konusunda şöyle bir sıkıntı olabilir kullanıcı 14k toke
 (bu adımın nasıl yapılacağğı hakkında tam olarak kesin ve net bir fikrim yok)
 
 sence bu durumu nasıl profesyonelce bir şekilde ele alabiliriz? nasıl sıyrılabiliriz bu işten? senin bir önerin var mıdır?
+
+---
+
+## Round 1 — Özet ve netleşen kararlar
+
+Cevapların hepsini okudum. Netleşenler:
+
+- **Kapsam**: sadece onboarding/iskelet oluşturma. `/template`'e chat eklemek ayrı, ileriki bir iş.
+- **DB yazma**: tamamen draft — client tarafında tutulur, DB'ye hiç dokunulmaz, sadece "Devam et"te tek seferlik commit edilir (mevcut `complete_onboarding` RPC'si aynen kullanılabilir, tek fark: `p_blocks` artık formdan değil, chat'te düzenlenmiş draft'tan gelir).
+- **Güncelleme**: patch tarzı (ekle/güncelle/sil operasyon listesi). "Beğenmedim" gibi genel/belirsiz bir mesajda AI netleştirici soru sorar, körlemesine tahmin/patch üretmez.
+- **Konuşma geçmişi**: TAM geçmiş her turda modele gönderilir (stateless değil) — maliyet artışını kabul ediyorsun.
+- **Alaka eşiği (Q5, sana bırakıldı)** → **KARARIM**: tek `generateObject` çağrısı, şemaya `is_relevant: boolean` + `rejection_reason?: string` eklenmiş hâliyle. Ayrı bir ön-kontrol çağrısı yapmıyoruz (maliyeti ~2 katına çıkarır, senin "maliyeti düşük tut" kısıtınla çelişir).
+- **Kullanım sınırı**: token bazlı (mesaj sayısı değil).
+- **Reddedilen mesajlar**: onlara da token sınırı konur; alakalı + alakasız mesajların tokenleri TEK bir ortak bütçede toplanır (ayrı sayaç yok).
+- **Responsive**: şimdilik yok, sadece masaüstü varsayımıyla inşa edilecek.
+
+Bir gerilim var, aşağıda not ettim: Q2'de "DB'ye ancak kullanıcı kesin kabul edince yazılır" dedin; kullanıcı notundaki "sistemin otomatik onaylayıp kullanıcıyı içeri sokması" önerisi bununla çelişebilir. Aşağıda buna nasıl çelişmeden çözüm bulunabileceğini anlatıyorum (Q10).
+
+---
+
+## Kullanıcı notuna yanıt — token sınırına "ortasında" yakalanma sorunu
+
+Senin endişen haklı: sabit bir tavan koyarsak, kullanıcı tam işini bitirecekken ortada kalabilir ("son mesajda sınıra takılıp istediğini yaptıramama"). Ama "kullanıcıya çaktırmadan otomatik onaylayıp bir sonraki adıma sokmak" fikrini önermiyorum — sebebi:
+
+1. **Q2'deki kendi kararınla çelişir.** Kullanıcı onayı olmadan DB'ye yazmak (draft'ı "otomatik kabul edilmiş" saymak), "kesin kabul edilmeden hiçbir şey commit edilmez" ilkesini bozar. Kullanıcı hiç sormadığı bir iskeletle karşılaşırsa (dashboard'da), bu güven kırar — özellikle "spor saatini akşama al dedim ama hâlâ sabah görünüyor" gibi bir senaryoda fark edilirse kötü bir sürpriz olur.
+2. **"Çaktırmadan" yönlendirme, kullanıcıyı gerçek isteğinden saptırıp aceleye getirmek anlamına gelir** — bu bir güven/UX riski, "profesyonel" olanın tam tersi.
+
+Bunun yerine iki basit mekanizmayla aynı sorunu, kullanıcıyı yanıltmadan çözebiliriz:
+
+**(a) Kademeli, açık uyarı** — bütçenin örn. %70'inde ve %90'ında chat içinde nazik bir sistem mesajı belirir: *"Bu oturumda kullanabileceğin düzenleme hakkının bir kısmı kaldı, önemli değişiklikleri şimdi yapmanı öneririz."* Kullanıcı sınırın yaklaştığını görür, sürpriz olmaz.
+
+**(b) Kesinti asla bir yanıtın ORTASINDA olmaz.** Bütçe kontrolü bir sonraki mesaj GÖNDERİLMEDEN ÖNCE yapılır, o an yeterli bütçe yoksa input o zaman kilitlenir — ama o ana kadarki SON işlenmiş mesaj/patch her zaman tam tamamlanmış olur. Yani kullanıcı "spor saatini akşama al" yazıp gönderdiyse, o istek bütçeyi aşsa bile o turun yanıtı/patch'i tam işlenir; kilitleme bir SONRAKİ mesaj için devreye girer. Senin tarif ettiğin "tam ihtiyacım olan son mesajda kesilme" senaryosunun büyük kısmı böylece zaten oluşmaz.
+
+Kilide takılınca gösterilecek mesaj da pozitif çerçevelenir (kullanıcıyı suçlamayan/kısıtlanmış hissettirmeyen bir ton): *"İskeletin oldukça netleşti. Şimdilik bu haliyle devam edebilirsin — ince ayarları istediğin zaman tekrar yapabileceksin."* (ileride `/template` chat'i eklenince bu cümle gerçek de olur). "Devam et" butonu zaten ekranda duruyor, tek tıkla ilerlenebiliyor — yani kilit, kullanıcıyı çıkışsız bırakmıyor, sadece o oturumdaki chat'i kapatıyor.
+
+Bunu Round 2'de Q10 olarak soruyorum, onayını bekliyorum.
+
+---
+
+## Round 2
+
+❓ **Q9** — **Token bütçesi tavanı**: Tam geçmiş her turda gönderildiği için (Q4) maliyet konuşma uzadıkça katlanarak artıyor — 10. mesajda gönderilen istek, 1. mesajdakinden çok daha büyük olacak (geçmişin tamamı + sistem prompt + şema her seferinde tekrar gidiyor). Tek bir oturum için (relevant+irrelevant birleşik) toplam giriş+çıkış token bütçesi ne olsun?
+
+➡️ **Güncellenmiş öneri (maliyet önceliğine göre)**: ~~40.000~~ → **oturum başına ~25.000 token** (giriş+çıkış toplam), kabaca 8-10 anlamlı turu karşılar. Haiku 4.5 fiyatlandırması $1/M giriş, $5/M çıkış — bu tavanla, caching olmadan bile oturum başı maliyet ~$0.04'e, prompt caching ile (aşağıya bak) ~$0.01-0.02'ye iner.
+>
+> **Ek karar (soru değil, doğrudan uygulanacak): Prompt caching açık olacak.** Anthropic'in `cache_control` mekanizmasıyla sistem prompt + o ana kadarki (değişmeyen) geçmiş önekini cache'leyeceğiz — her turda sadece yeni mesaj + şema gerçek fiyattan işlenir, geçmişin tekrar eden kısmı ~%90 daha ucuza gelir. Bu, kullanıcı deneyiminde (Q4'te kararlaştırdığın tam geçmiş hafızası) hiçbir taviz vermeden maliyeti düşürüyor — saf mühendislik optimizasyonu, UX'i etkilemiyor, o yüzden onayına gerek görmeden uygulama aşamasında ekleyeceğim.
+
+> [!answer] karar verildi herhalde? verilmediyse ya da benden bir cevap bekliyorsan, lütfen bunu belirt.
+>
+
+**Kapandı.** Bu tamamen benim kararımdı (senin "maliyeti düşük tut" talimatına dayanarak), senden ek bir cevap beklemiyordum — sadece şeffaf olayım diye dosyaya yazdım. 25.000 token/oturum + prompt caching, uygulama aşamasında böyle gidecek.
+
+---
+
+❓ **Q10** — **Bütçe tükenince davranış**: Yukarıdaki (a)+(b) yaklaşımını (kademeli açık uyarı + kesinti asla bir yanıtın ortasında olmaz, hep bir sonraki mesaj için devreye girer + pozitif çerçeveli kilit mesajı) onaylıyor musun, yoksa farklı bir yön mü istersin (örn. otomatik-devam-et gibi)?
+
+➡️ (a)+(b) öneriyorum — yukarıda gerekçelendirdim, Q2'deki "kesin onay olmadan DB'ye yazma yok" ilkesiyle çelişmeyen tek yol bu.
+
+> [!answer] bütçe tükenirse. (en kötü ihtimalli harcanacak token maaliyetine göre.) örnek verecek olursam en kötü kullanıcı başı token maaliyeti (bu ai chat için bu arada) bakiyeden fazla ise, kullanıcının ekranına ai chat ile iskelet düzenleme çıkmayacak bile, kullanıcı oluşturulan temel iskeletten devam edecek, kendi düzenleyecek.
+>
+> bütçe tükenmesinden bahsettiğin şey sermaye bitiminden dolayı ai chat tokenı karşılayamama durumu ise evet dediklerim geçerli. ama başka bir şey ise lütfen belirt.
+>
+>
+
+Bu, benim sorduğum şeyden (bir kullanıcının TEK oturumdaki 25K'lık kişisel bütçesi bitince ne olur) farklı bir konu — sen **platform genelinde toplam AI-chat maliyetinin senin karşılayabileceğin miktarı (sermaye) aşması** durumundan bahsediyorsun. İkisi de gerçek ve ayrı sorunlar, ikisini de dosyaya işliyorum: aşağıda **Q12** olarak açtım, çünkü bunun için ayrı bir mekanizma gerekiyor (kişisel token sayacından farklı — küresel bir açma/kapama anahtarı).
+
+---
+
+❓ **Q11** — **Netleştirici soru akışının teknik temsili**: Kullanıcı "beğenmedim" gibi belirsiz bir şey yazınca AI'ın netleştirici soru sorması (Q3'ün cevabı), şemada ayrı bir alan olarak mı temsil edilsin (`needs_clarification: boolean` + `clarification_question: string`, patch boş döner), yoksa bu da `is_relevant: true` + boş patch + düz asistan mesajı olarak mı ele alınsın? Bu tur da token bütçesinden düşsün mü (gerçek bir AI çağrısı yapıldığı için maliyeti var)?
+
+➡️ Ayrı alan (`needs_clarification` + `clarification_question`) öneririm — hem UI'da "bu bir soru, bir onay değil" ayrımını netleştirir hem de ileride (örn. hangi bloğu kastettiğini tıklayarak seçme gibi) bir UI geliştirmek istersen zemin hazır olur. Ve evet, bütçeden düşmeli — gerçek bir çağrı, gerçek maliyet.
+
+> [!answer] evet, A olur, senin önerdiğin tıklama ile seçme muhabbeti de kesinlikle olsun istiyorum bu arada bunu da notlar arasına kaydet.
+
+**Kapandı.** `needs_clarification` + `clarification_question` alanları eklenecek, bu turlar da token bütçesinden düşecek. Ayrıca: netleştirici soru sorulduğunda, kullanıcı serbest metinle cevap yazmak yerine (isterse yine yazabilir ama) **hangi bloğu kastettiğini tıklayarak seçebileceği bir liste/buton grubu** gösterilecek — AI'ın `clarification_question` ile birlikte döndürdüğü aday blok id'lerinden UI otomatik üretilir. Bu, mimari nota da eklendi.
+
+---
+
+❓ **Q12** — **Küresel maliyet güvenlik anahtarı**: Tek kullanıcının oturum-içi 25K token bütçesinden (Q9) ayrı olarak, **platform genelinde** toplam AI-chat maliyeti senin karşılayabileceğin sermayeyi aşarsa, özelliğin tamamen kapanması gerekiyor (kullanıcı chat'i hiç görmez, direkt oluşturulan iskeletle devam eder — bu zaten mevcut/bugünkü akışın aynısı, sıfır ek risk). Bunu nasıl tetikleyelim: (a) basit bir manuel açma/kapama anahtarı (env var veya DB'de tek satır bir `ai_chat_enabled` bayrağı — sen ihtiyaç olduğunda elle kapatırsın), yoksa (b) otomatik/gerçek-zamanlı bir mekanizma (her çağrının maliyetini bir tabloya loglayıp, aylık toplam belirlediğin bir sınırı aşınca sistem kendini otomatik kapatır)?
+
+➡️ Faz 1 için **(a) manuel anahtar** öneririm. Gerekçe: Anthropic'in gerçek zamanlı "bakiye" APIsi yok, (b)'yi düzgün yapmak (kullanım loglama tablosu + toplama job'ı + eşik mantığı) başlı başına bir mini-özellik, kullanıcı sayın küçükken gereksiz mühendislik. Manuel anahtar bugün beni durdurmaz, ihtiyaç olursa saniyeler içinde kapatılabilir; (b)'yi ileride kullanıcı sayısı gerçekten büyüyünce ayrı bir iş olarak ele alırız (o zaman zaten kullanım loglaması analiz için de faydalı olur).
+
+> [!answer]
+> maaliyeti toplama özelliği sakın bir köşeye atıp unutma ama, şimdilik a seçeneğini kullanacağız fakat ileride kesin olarak b'ye çevireceğiz.
+>
+>
+
+**Kapandı.** Buna göre ayarladım: Faz 1'de anahtar manuel (a) olacak, AMA her `generateObject` çağrısının `usage` verisini (giriş/çıkış token) baştan itibaren hafif bir `ai_chat_usage` log tablosuna yazacağız (kullanıcı id, oturum, tokenler, tahmini maliyet, tarih). Böylece (b)'ye geçiş ileride sadece "bu tabloyu topla, eşiği aşınca bayrağı kapat" mantığını eklemek olacak — sıfırdan başlamayacağız, veri baştan birikmiş olacak. Bu, mimari nota da eklendi.
+
+---
+
+## Grilling tamamlandı — nihai karar özeti
+
+Frontier boş, açık soru kalmadı. Uygulamaya geçmeden önce plan dosyasında referans alınacak nihai kararlar:
+
+1. **Kapsam**: Sadece onboarding/iskelet oluşturma adımı. `/template` sonraki faz.
+2. **Layout**: Masaüstü, sol %25 chat + sağ %75 tablo. Responsive tasarım şimdilik yok.
+3. **State**: Tamamen client-side draft (`blocks[]` + `messages[]`), DB'ye hiç yazılmaz. Sadece "Devam et"te mevcut `complete_onboarding` RPC'sine gönderilir.
+4. **Güncelleme**: Patch tarzı (ekle/güncelle/sil). Belirsiz geri bildirimde AI netleştirici soru sorar (`needs_clarification` + `clarification_question` + aday blok id'leri), UI bunları tıklanabilir seçeneklere çevirir.
+5. **Konuşma geçmişi**: Tam geçmiş her turda gönderilir, prompt caching ile maliyeti düşürülür.
+6. **Alaka eşiği**: Tek `generateObject` çağrısı, şemada `is_relevant` + `rejection_reason`.
+7. **Bütçe**: Oturum başına ~25.000 token (giriş+çıkış, relevant+irrelevant+clarification hepsi dahil). Bütçe kontrolü her mesaj göndermeden önce yapılır (bir yanıtın ortasında asla kesilmez), %70/%90'da nazik uyarı, tükenince input kilitlenir + pozitif mesaj, "Devam et" hep aktif.
+8. **Küresel anahtar**: `ai_chat_enabled` gibi manuel bir bayrak (env var veya DB). Baştan itibaren her çağrının kullanım/maliyet verisi `ai_chat_usage` tablosuna loglanır (ileride otomatik eşik-bazlı kapanmaya geçiş için temel).
+
+---
+
+## İlgili
+
+Bu grilling'den çıkan, "şimdilik böyle ama ileride kesin değişecek" türü kararlar (madde 1 ve 8 yukarıda) → [[12 - ⏳ Ertelenmiş Kararlar]] içinde ayrıca listelendi. Uygulama sonrası mimari/DB durumu için → [[00 - 🧠 Ana Hub]], AI entegrasyonu genel bakış için → [[08 - 🤖 AI Entegrasyonu]].
+
+---
+
+## Mimari not (soru değil, bilgin olsun)
+
+Draft state'in nerede tutulacağı bir tasarım kararı değil, doğrudan Q2+Q4'ün sonucu: iskelet dizisi (`blocks[]`) ve mesaj geçmişi (`messages[]`) tamamen **client-side React state** olarak tutulacak (parent component, örn. yeni bir `SkeletonChatEditor.tsx`). Her mesajda mevcut draft + tam geçmiş + yeni mesaj birlikte yeni bir API route'a (örn. `/api/onboarding/edit-skeleton`) gönderilir, dönen patch client'ta uygulanır. "Devam et"te bu son `blocks[]` hâli, mevcut `complete_onboarding` RPC'sine `p_blocks` olarak geçilir — DB tarafında yeni bir şey gerekmez.
+
+Token bütçesi takibi, her `generateObject` çağrısının döndürdüğü `usage` (input+output token) alanları toplanarak client-side'da (veya route'ta bir session-scoped sayaç ile) yapılır — ayrı bir DB tablosu/kaydı gerekmez, oturum bitince (Devam et'e basılınca) sayaç zaten anlamsızlaşır.
+
+**Netleştirici soru UI'ı (Q11 onaylandı)**: AI `needs_clarification: true` döndürdüğünde, şemadaki aday blok id'lerinden (`ambiguous_block_ids: string[]` gibi bir alan) chat içinde tıklanabilir bir buton/kart listesi otomatik üretilir — kullanıcı "spor bloğu" veya "çalışma bloğu" gibi bir seçeneğe tıklayınca o seçim yeni bir kullanıcı mesajı gibi gönderilir, AI artık hangi bloktan bahsedildiğini bilerek patch üretir. Serbest metinle cevap yazmak da hâlâ mümkün, buton sadece hızlı yol.
+
+**Küresel maliyet loglama (Q12 kapandı)**: Yeni bir `ai_chat_usage` tablosu — her `generateObject` çağrısından sonra bir satır (`user_id`, `session_id` veya onboarding attempt referansı, `input_tokens`, `output_tokens`, `estimated_cost_usd`, `created_at`). Şimdilik sadece kayıt tutuluyor, otomatik bir eşik/kapanma mantığı yok — anahtar (`ai_chat_enabled`) manuel. İleride bu tablo üzerinden toplam harcama hesaplanıp otomatik kapanma eklenebilir.

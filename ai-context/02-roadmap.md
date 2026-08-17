@@ -1,61 +1,57 @@
 # Uygulama Yol Haritası
 
-Bu dosya "şu an nerede duruyoruz, yeni bir chat açılınca hangi işten devam edilecek" sorusuna cevap verir. Vizyon/karar geçmişi için [[01-vision-and-open-questions]]'a bak. Görsel bir özet için Obsidian'da `_BrainMap/10 - 🚦 Şu An Neredeyiz (Web Dönemi).md` dosyasına bakabilirsin (mermaid diyagramlı).
+Bu dosya "şu an nerede duruyoruz, yeni bir chat açılınca hangi işten devam edilecek" sorusuna cevap verir — kronolojik bir günlük değil, bir durum özeti. Mimari/DB detayları için [[00-current-state]], karar gerekçeleri için [[01-vision-and-open-questions]], "şimdilik böyle ama ileride kesin değişecek" kararları için [[03-deferred-decisions]]. Görsel özet: Obsidian'da `_BrainMap/10 - 🚦 Şu An Neredeyiz (Web Dönemi).md` (mermaid diyagramlı).
 
-## Durum: WEB DÖNEMİ — Adım 1, 2, 3 ve genişletme turu (Faz A/B/C/D/E) tamamlandı
+## Şu an neredeyiz
 
-**2026-08-13 kararı**: Kullanıcının geliştirme ortamı Windows PC + bir iPhone'dan ibaret; Mac, Xcode ve Apple Developer Program üyeliği yok. iOS native geliştirme sadece macOS'te mümkün olduğu için **mobil/bildirim işi (aşağıdaki "Mobil dönem — ileride" bölümü) tamamen durduruldu**, Mac + Apple Developer hesabı edinilene kadar hiç konuşulmuyor. Web Push gibi geçici bir ikame de değerlendirilip kullanıcı tarafından reddedildi — orijinal vizyona sadık kalınıyor (bildirim sadece iOS'a özel, ileride).
+**Web dönemi 3 adım + genişletme turu (Faz A-E) + onboarding AI-sohbet planı (Faz 1-5) tamamlandı.** Sıradaki gündem kullanıcıyla netleşecek — bu dosya güncellenene kadar "aktif iş yok" say.
 
-Bu yüzden şu an tek gündem **web dönemi**: karmaşık "Faz 1-6" numaralandırması yerine, kafa karıştırmaması için 3 basit adıma indirildi.
+**2026-08-13 kararı**: Kullanıcının geliştirme ortamı Windows PC + iPhone; Mac, Xcode, Apple Developer üyeliği yok. iOS native geliştirme sadece macOS'te mümkün olduğu için mobil/bildirim işi (aşağıdaki "Mobil dönem" bölümü) **tamamen durduruldu**, Mac + Apple Developer hesabı edinilene kadar gündeme gelmeyecek. Web Push gibi bir ikame değerlendirilip reddedildi — bildirim sadece iOS'a özel kalacak.
 
-## Web dönemi — 3 adım
+## Tamamlanan işler (özet — detay [[00-current-state]]'te)
 
-### ✅ Adım 1 — Cilalama (tamamlandı, 2026-08-13/14)
-- Ana sayfadaki (`TaskCard.tsx`) görev kartına, arşiv sayfasındaki gibi "→ [yeni tarih]" rozeti eklendi — ertelenen bir görevin nereye taşındığı artık her yerde görünüyor
-- Geniş ekranda içerik artık dar bir sütuna sıkışmıyor: `dashboard/page.tsx` 2 sütunlu grid + üstte yan yana istatistikler, `tasks/page.tsx` genişletildi
-- Tarih formatlama mantığı `src/lib/date.ts`'e taşındı (tekrar önlendi)
-- Bonus: `NEXT_PUBLIC_DEV_BYPASS=true` iken `TaskCard`'daki zaman kilidi de devre dışı kalıyor (test kolaylığı, "DEV" etiketiyle belli ediliyor)
+### Web dönemi — 3 adım (2026-08-13/14)
+- **Adım 1 — Cilalama**: erteleme rozeti, geniş ekran layout, `src/lib/date.ts`, dev-bypass zaman kilidi istisnası.
+- **Adım 2 — Davranış analizi**: `/analiz` sayfası + `src/lib/analytics.ts` (`analyzeBehavior()`).
+- **Adım 3 — Verimli alan görseli**: gün × saat-dilimi ısı haritası (`buildProductivityHeatmap()`).
 
-### ✅ Adım 2 — Davranış analizi (tamamlandı, 2026-08-14)
-- Yeni `/analiz` sayfası + `src/lib/analytics.ts` (`analyzeBehavior()`): genel tamamlama oranı, saat dilimine göre (sabah/öğlen/akşam/gece) başarı oranı, en çok ertelenen/iptal edilen görev başlıkları
-- İstek anında hesaplanıyor, cron/materialized view yok (veri hacmi küçükken gerek yok)
-- Sidebar'a "Analiz" linki eklendi
+### Web dönemi — genişletme turu, Faz A-E (2026-08-15/16)
+Dosya çakışması olmayan 5 parça, paralel agent'larla:
+- **A — Zaman kilidi esnekliği**: 15 dk tolerans.
+- **B — Görev oluşturma/silme**: tekilleştirilmiş `createTask`/`deleteTask`.
+- **C — Kademeli erteleme + görev bölme**: `rescheduleTask` 3 kademeli arama.
+- **D — Admin paneli**: `is_admin` + `admin_list_users`/`admin_get_user_tasks` RPC'leri.
+- **E — Kişisel öneri motoru**: `/analiz`'de "Şablon önerileri" (`generateSkeletonSuggestions`).
 
-### ✅ Adım 3 — Verimli alan görseli (tamamlandı, 2026-08-14)
-- `/analiz` sayfasına gün × saat-dilimi ısı haritası eklendi (`buildProductivityHeatmap()`): hangi günün hangi diliminde tamamlama oranı yüksek/düşük, tek bakışta görünüyor
-- `dataviz` skill'i takip edildi: tek renk (yeşil) sequential dolgu, orana göre koyulaşma, direct label (yüzde), boş hücre (veri yok) ile "%0" (veri var, başarısız) görsel olarak ayrışık, hücre üstünde native `title` tooltip ile tam sayılar
-- Bu, "web dönemi 3 adım" planının son adımıydı — sıradaki gündem kullanıcıyla netleşecek (mobil dönem hâlâ Mac/Apple hesabı bekliyor)
+### Onboarding — AI sohbet ile iskelet düzenleme, Faz 1-5 (2026-08-16/17)
+Kapsamlı bir grilling (mimari mülakat) sürecinin sonucu — kararlar `_BrainMap/11 - 🔥 Grilling - İskelet Chat Düzenleme.md`'de, uygulama planı `C:\Users\erayb\.claude\plans\breezy-marinating-pillow.md`'de. Maliyet önceliği: token bazlı bütçe (~25K/oturum) + prompt caching denemesi + platform genelinde manuel açma/kapama anahtarı (`app_config.ai_chat_enabled`, varsayılan kapalı).
 
-## Bu oturumda ayrıca düzeltilen (Adım 1'den önce, ayrı bir hata avı turunda)
+- **Faz 1 — Altyapı**: `generate-skeleton`/`commit` route ayrımı, `app_config` + toggle, `phase='form'|'review'` + salt-okunur önizleme.
+- **Faz 2 — Chat backend + patch + arayüz**: `edit-skeleton` route, `messages` array (projede ilk), halüsinasyon filtresi, `ChatPanel`/`SkeletonChatEditor`.
+- **Faz 3 — Token bütçesi**: mesaj-öncesi bütçe kontrolü, `BudgetBanner` (%70/%90/%100), kilit UI.
+- **Faz 4 — Prompt caching**: kod eklendi, gerçek testte etkisi doğrulanamadı (kök sebep analizi [[00-current-state]]'te).
+- **Faz 5 — Admin kullanım özeti**: `admin_ai_chat_usage_summary()` RPC + `AiChatUsageSummaryCard`.
 
-`get_or_create_daily_tasks` RPC'sindeki erteleme/materialization hatası (bkz. [[00-current-state]] "Bilinen düzeltilmiş hatalar") ve bununla bağlantılı 3 ek sorun (nullable kolonlar, `task_notifications` RLS kolon kilidi, `db:types` sonrası silinen elle eklenmiş tipler) düzeltildi ve gerçek veriyle test edildi.
+Yol boyunca çıkan ve düzeltilen genel-geçer teknik kısıtlar (Anthropic structured-output şema sınırları, `SECURITY DEFINER`+`RETURNS TABLE` ambiguous-column deseni) [[00-current-state]]'in ilgili bölümlerine taşındı — yeni kod yazarken oraya bak.
 
-## Web dönemi — genişletme turu (2026-08-15/16, tamamlandı)
+Tüm değişiklikler `feat/task-management-and-admin` branch'inde, henüz commit edilmedi (kullanıcı onayı bekleniyor).
 
-3 adımlık plan bittikten sonra kullanıcıyla netleşen 5 yeni parça, dosya çakışması olmayanlar paralel agent'larla yapıldı:
-
-- **Faz A — Zaman kilidi esnekliği (tamamlandı)**: `TaskCard.tsx`'teki zaman kilidine 15 dakikalık tolerans eklendi (`TIME_LOCK_GRACE_MS`), görev saatinden 15 dk öncesine kadar erken işaretlenebiliyor.
-- **Faz B — Görev oluşturma/silme (tamamlandı)**: `tasks/actions.ts`'te tek bir `createTask`/`deleteTask` implementasyonu, hem Bugün hem Görevler sayfası `src/components/TaskFormModal.tsx` üzerinden bunu kullanıyor. Silme kuralı: `skeleton_block_id` NULL (manuel görev) → hard delete; DOLU (şablon kökenli) → `status='cancelled'` soft delete — aksi halde `get_or_create_daily_tasks` o günü "hiç materialize edilmemiş" sanıp şablonu yeniden oluşturur (bkz. [[00-current-state]] bilinen hata #1).
-- **Faz D — Admin paneli (tamamlandı)**: `profiles.is_admin` kolonu + `admin_list_users()`/`admin_get_user_tasks()` RPC'leri (`20260815090000_admin_role.sql`, canlı Supabase projesine uygulandı). `/admin` route'u (`(dashboard)` dışında, kendi layout guard'ı var) tüm kullanıcıları listeliyor, kullanıcı detayında `/analiz` ile birebir aynı görsel raporu (aynı `analyzeBehavior`/`buildProductivityHeatmap` fonksiyonları) gösteriyor. Sadece `erayboranagirdici@gmail.com` admin.
-- **Faz C — Kademeli erteleme algoritması + görev bölme (tamamlandı, 2026-08-16)**: `rescheduleTask` artık aynı gün → ertesi gün → (esnekse, `flexibility_score ≥ 4`) 2 güne bölme → en yakın uygun gün (14 gün) sırasıyla arıyor. `tasks.linked_task_id` kolonu eklendi (`20260816090000_task_split_link.sql`), bölünen görevler `(1/2)`/`(2/2)` başlık eki ve `TaskCard`'da rozetle gösteriliyor. Detay: [[00-current-state]].
-- **Faz E — Kişisel veri havuzu / öneri motoru (tamamlandı, 2026-08-16)**: `/analiz` sayfasına "Şablon önerileri" bölümü eklendi. `generateSkeletonSuggestions()` mevcut `analyzeBehavior`/`buildProductivityHeatmap` çıktısını + kullanıcının esnek (`is_hard_constraint=false`) bloklarını AI'a verip en fazla 5 somut öneri (gün/saat değişikliği + 1 cümlelik gerekçe) üretiyor, `skeleton_suggestions` tablosunda `pending` olarak bekliyor. Kullanıcı "Kabul et" demeden `skeleton_blocks`'a hiçbir otomatik değişiklik uygulanmıyor. AI'ın döndürdüğü `skeleton_block_id`'ler halüsinasyona karşı kullanıcının kendi bloklarına süzülüyor. Detay: [[00-current-state]].
-
-Web dönemi genişletme turunun 5 fazı (A/B/C/D/E) burada tamamlandı. Sıradaki gündem kullanıcıyla netleşecek.
+Kapsam kasıtlı olarak sadece onboarding'le sınırlı tutuldu — aynı chat deneyiminin `/template` sayfasına genişletilmesi net bir "ileride yapılacak" karar, henüz başlanmadı: [[03-deferred-decisions]] madde 2.
 
 ## Mobil dönem — ileride (Mac + Apple Developer hesabı edinilince gündeme gelir)
 
 Eski "Faz 1-6" planının mobile özel kısımları burada donduruldu:
 
-- **Faz 1 (veri modeli) — kısmen tamamlandı**: `task_notifications` tablosu (migration + RLS + partial index) zaten var (2026-08-12), ama şu an hiçbir UI/backend onu kullanmıyor (Faz 2'yi bekliyor).
-- **Faz 2 (bildirim tetikleme motoru)**: Supabase Edge Function + cron ile scheduler, APNs entegrasyonu, device token kaydı. Scheduler'ın salt "doğru zamanda doğru satırı oluşturma" mantığı teorik olarak Apple hesabı gerektirmeden yazılabilir ama şimdilik ertelendi.
-- **Faz 3 (iOS native istemci)**: Teknoloji kararı bekliyor (Swift/SwiftUI vs React Native, bkz. 01'deki açık soru #5). APNs kayıt/izin akışı, action-butonlu bildirim, Live Activity.
+- **Faz 1 (veri modeli) — kısmen tamamlandı**: `task_notifications` tablosu zaten var (bkz. [[00-current-state]]), ama hiçbir UI/backend onu kullanmıyor (Faz 2'yi bekliyor).
+- **Faz 2 (bildirim tetikleme motoru)**: Supabase Edge Function + cron ile scheduler, APNs entegrasyonu, device token kaydı.
+- **Faz 3 (iOS native istemci)**: Teknoloji kararı bekliyor (Swift/SwiftUI vs React Native, bkz. [[01-vision-and-open-questions]] açık soru #5). APNs kayıt/izin akışı, action-butonlu bildirim, Live Activity.
 
 Platform kapsamı (kesin, karar değişmedi): iOS tam kapsam (bildirimli hatırlatma + gecikmeli onay + action-butonlu bildirim + Live Activity) — web'de bildirim/hatırlatma hiç olmayacak, sadece geniş ekran + manuel aksiyon.
 
-## Her adım/faz için standart süreç (kullanıcı talimatı — 2026-08-12)
+## Her adım/faz için standart süreç (kullanıcı talimatı)
 
-Her adımdan/fazdan önce mutlaka:
+Bağımsız birden fazla faz varsa hepsi tek seferde özetlenip toplu onay alınabilir (paralel agent'larla uygulanabilir); riskli/şema değiştiren veya birbirine bağımlı fazlar için tek tek onay gerekir (bkz. `CLAUDE.md`). Her fazdan/adımdan önce:
 1. **Sade dille anlat**: ne yapılacak, ne değişecek, ne eklenecek — teknik jargon olmadan.
 2. **"Nasıl göreceğim?" sorusunu cevapla**: kullanıcının değişikliği somut olarak nasıl fark edeceğini/test edeceğini söyle.
-3. **Onay bekle**: kullanıcı net şekilde onaylamadan ("başla", "onaylıyorum" vb.) koda geçilmez.
+3. **Onay bekle**: kullanıcı net şekilde onaylamadan koda geçilmez.
 4. Onay geldikten sonra uygula, gerçek tarayıcıda test et, doğrula.

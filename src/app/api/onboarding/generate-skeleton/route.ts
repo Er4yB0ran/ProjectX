@@ -1,7 +1,6 @@
 import { generateObject } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 type EnergyPeak = 'Sabah' | 'Öğle' | 'İkindi' | 'Akşam' | 'Gece'
@@ -32,11 +31,16 @@ const skeletonSchema = z.object({
       end_time: z.string(),
       title: z.string(),
       is_hard_constraint: z.boolean(),
-      energy_cost: z.number().min(1).max(5),
-      flexibility_score: z.number().min(1).max(5),
+      energy_cost: z.number(),
+      flexibility_score: z.number(),
     })
   ),
 })
+
+/** Anthropic'in structured output şeması 'number' tipinde min/max desteklemiyor — modelden sonra sunucu tarafında sıkıştırıyoruz. */
+function clampScore(n: number): number {
+  return Math.min(5, Math.max(1, Math.round(n)))
+}
 
 const SYSTEM_PROMPT = `Sen bir sistem kurucususun. Kullanıcının verdiği esnek verilere göre, haftanın 7 günü için referans bir iskelet oluştur. Hayatı tamamen doldurma, sadece sabit görevleri (is_hard_constraint: true) ve kullanıcının enerjisine uygun birkaç odak bloğunu (is_hard_constraint: false) yerleştir.
 
@@ -116,7 +120,6 @@ export async function POST(request: Request) {
 
   const userPrompt = buildUserPrompt(form)
 
-  let result: z.infer<typeof skeletonSchema>
   try {
     const { object } = await generateObject({
       model: anthropic('claude-haiku-4-5-20251001'),
@@ -124,25 +127,14 @@ export async function POST(request: Request) {
       system: SYSTEM_PROMPT,
       prompt: userPrompt,
     })
-    result = object
+    const blocks = object.blocks.map((b) => ({
+      ...b,
+      energy_cost: clampScore(b.energy_cost),
+      flexibility_score: clampScore(b.flexibility_score),
+    }))
+    return Response.json({ blocks })
   } catch (err) {
     console.error('[onboarding] generateObject error:', err instanceof Error ? err.message : err)
     return Response.json({ error: 'Şablon oluşturulamadı, lütfen tekrar deneyin' }, { status: 500 })
   }
-
-  const { error: rpcError } = await supabase.rpc('complete_onboarding', {
-    p_user_id: user.id,
-    p_blocks: result.blocks,
-    p_wake_up: form.weekdayWakeUp + ':00',
-    p_bed_time: form.weekdaySleep + ':00',
-    p_peaks: form.energyPeaks,
-  })
-
-  if (rpcError) {
-    console.error('[onboarding] rpc error:', rpcError)
-    return Response.json({ error: 'Veriler kaydedilemedi, lütfen tekrar deneyin' }, { status: 500 })
-  }
-
-  revalidatePath('/', 'layout')
-  return Response.json({ ok: true })
 }

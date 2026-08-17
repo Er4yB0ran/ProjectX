@@ -39,6 +39,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_chat_usage: {
+        Row: {
+          cache_read_tokens: number | null
+          cache_write_tokens: number | null
+          created_at: string | null
+          id: string
+          input_tokens: number
+          output_tokens: number
+          session_id: string
+          total_tokens: number
+          turn_type: string
+          user_id: string
+        }
+        Insert: {
+          cache_read_tokens?: number | null
+          cache_write_tokens?: number | null
+          created_at?: string | null
+          id?: string
+          input_tokens: number
+          output_tokens: number
+          session_id: string
+          total_tokens: number
+          turn_type: string
+          user_id: string
+        }
+        Update: {
+          cache_read_tokens?: number | null
+          cache_write_tokens?: number | null
+          created_at?: string | null
+          id?: string
+          input_tokens?: number
+          output_tokens?: number
+          session_id?: string
+          total_tokens?: number
+          turn_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_config: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       daily_reflections: {
         Row: {
           ai_message: string
@@ -331,6 +396,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_ai_chat_usage_summary: {
+        Args: never
+        Returns: {
+          distinct_sessions: number
+          distinct_users: number
+          total_cache_read_tokens: number
+          total_input_tokens: number
+          total_output_tokens: number
+          total_tokens: number
+          total_turns: number
+        }[]
+      }
       admin_get_user_tasks: {
         Args: { p_user_id: string }
         Returns: {
@@ -365,6 +442,10 @@ export type Database = {
           id: string
           onboarding_completed: boolean
         }[]
+      }
+      admin_set_config: {
+        Args: { p_key: string; p_value: Json }
+        Returns: undefined
       }
       complete_onboarding: {
         Args: {
