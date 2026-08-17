@@ -1,0 +1,27 @@
+# ProjectX
+
+Türkçe, AI destekli zaman/görev yönetimi uygulaması. Kullanıcının enerji döngüsüne göre haftalık bir "iskelet" (skeleton) oluşturur, bunu günlük görevlere çevirir.
+
+## Stack
+
+- Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4
+- Supabase (Postgres + Auth + RLS), Server Actions ağırlıklı (tek REST route: `/api/onboarding`)
+- AI: Anthropic Claude Haiku 4.5, Vercel AI SDK (`generateObject`/`generateText`, streaming yok)
+
+## Context dosyaları
+
+Detaylı mimari/şema bilgisi ve proje vizyonu için önce şunları oku (BrainMap'in tamamını okumadan önce). Bu dosyalar `.claude/` altında değil, repo kökünde düz bir klasörde — herhangi bir AI aracı veya insan projeye baktığında görsün diye:
+
+- [ai-context/00-current-state.md](ai-context/00-current-state.md) — mevcut kurulu sistemin özeti (routes, DB şeması, server actions, AI kullanım noktaları)
+- [ai-context/01-vision-and-open-questions.md](ai-context/01-vision-and-open-questions.md) — genişleyen vizyon (iOS'ta bildirim+Live Activity, web'de manuel/geniş-ekran, AI davranış analizi), BrainMap ile çelişen noktalar, açık mimari sorular
+- [ai-context/02-roadmap.md](ai-context/02-roadmap.md) — **fazlı yol haritası + "şu an neredeyiz" durumu. Yeni bir oturumda işe başlamadan önce MUTLAKA bu dosyayı oku.**
+- [ai-context/03-deferred-decisions.md](ai-context/03-deferred-decisions.md) — "şimdilik A yapıyoruz, ileride B'ye geçeceğiz" türü bilinçli ertelenmiş kararların listesi. Böyle bir karar duyarsan (grilling dahil, hangi oturumda geçtiğine bakılmaksızın) buraya da ekle.
+
+Kaynak doküman: `_BrainMap/` (Obsidian vault, kullanıcının kendi notları — mermaid/callout ağırlıklı, **düzenleme yapma**, sadece oku).
+
+## Kurallar
+
+- **PROJE ŞEKİL ALDIKÇA VE DEĞİŞTİKÇE `ai-context/*.md` DOSYALARINI GÜNCELLE.** Yeni bir mimari karar alındığında, vizyon netleştiğinde veya büyük bir özellik eklendiğinde bu dosyaları güncel tut. Bu klasör herkese (başka AI araçları dahil) açık — `.claude/` gibi araca özel bir yere taşıma/kopyalama.
+- `_BrainMap/**` kullanıcının Obsidian vault'u — kullanıcı özellikle istemedikçe buraya yazma.
+- Supabase şema değişikliğinden sonra `npm run db:types` ile tipleri güncelle.
+- **Fazlara başlamadan önce sade dille açıkla, onay bekle, sonra uygula — ama toplu onayla.** [ai-context/02-roadmap.md](ai-context/02-roadmap.md)'deki fazlara başlamadan önce: birbirinden bağımsız birden fazla faz/görev varsa hepsini tek seferde özetle (her biri için: ne yapılacak, neyin değişip neyin ekleneceği, kullanıcının bu değişikliği nasıl göreceği/test edeceği — teknik jargondan arındırılmış, anlaşılır bir dille). Kullanıcı tek seferde onayladıktan sonra (Plan Mode onayı ya da net bir "başla/onaylıyorum") bağımsız fazları/görevleri paralel agent'larla aynı anda çalıştırabilirsin — her biri için ayrı ayrı durup onay bekleme. Riskli veya mimari değişiklikler (şema değişikliği, birbirine bağımlı/sıralı fazlar) için istisna: bunları teker teker, her birinden önce ayrı onay alarak uygula.

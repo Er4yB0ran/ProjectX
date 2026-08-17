@@ -9,6 +9,23 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: {
+        fetch: async (url, options) => {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 3000)
+          try {
+            return await fetch(url, { ...options, signal: controller.signal })
+          } catch {
+            // Return a 503 instead of throwing — prevents Supabase from entering its retry loop
+            return new Response(
+              JSON.stringify({ error: 'service_unavailable', message: 'Supabase unreachable' }),
+              { status: 503, headers: { 'Content-Type': 'application/json' } }
+            )
+          } finally {
+            clearTimeout(timeout)
+          }
+        },
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -43,7 +60,8 @@ export async function updateSession(request: NextRequest) {
   const isProtected =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/template') ||
-    pathname.startsWith('/onboarding')
+    pathname.startsWith('/onboarding') ||
+    pathname.startsWith('/admin')
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone()

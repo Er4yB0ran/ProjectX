@@ -18,5 +18,13 @@ export default async function OnboardingPage() {
 
   if (profile?.onboarding_completed) redirect('/dashboard')
 
-  return <OnboardingForm />
+  const { data: config } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'ai_chat_enabled')
+    .single()
+
+  const aiChatEnabled = config?.value === true
+
+  return <OnboardingForm aiChatEnabled={aiChatEnabled} />
 }

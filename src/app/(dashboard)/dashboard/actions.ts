@@ -8,6 +8,9 @@ import type { TaskStatus } from '@/types/supabase'
 
 const END_OF_DAY = 23 * 60 + 59 // 1439 dakika = 23:59
 const MIN_DURATION = 15
+const MAX_SEARCH_DAYS = 14 // ADIM 3'te en yakin uygun gunun aranacagi son gun (task_date + 14)
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number)
@@ -20,10 +23,174 @@ function minutesToTime(mins: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
 }
 
-function addOneDay(dateStr: string): string {
+function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split('-').map(Number)
-  const next = new Date(y, m - 1, d + 1)
+  const next = new Date(y, m - 1, d + days)
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
+}
+
+function addOneDay(dateStr: string): string {
+  return addDays(dateStr, 1)
+}
+
+/** Europe/Istanbul takviminde "bugün" tarihi ve şu anki saat (gün başından itibaren dakika). */
+function nowIstanbul(): { dateStr: string; minutes: number } {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Istanbul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]))
+  const dateStr = `${map.year}-${map.month}-${map.day}`
+  const hour = map.hour === '24' ? 0 : Number(map.hour) // bazi ICU implementasyonlari gece yarisi icin "24" doner
+  const minutes = hour * 60 + Number(map.minute)
+  return { dateStr, minutes }
+}
+
+interface Slot {
+  start: number
+  end: number
+}
+
+interface DayTaskRow {
+  start_time: string | null
+  end_time: string | null
+}
+
+/** Bir gundeki (excludeTaskId haric) saatli gorevleri saat sirasina gore ceker. */
+async function fetchDayTasks(
+  supabase: SupabaseServerClient,
+  userId: string,
+  date: string,
+  excludeTaskId: string
+): Promise<{ start_time: string; end_time: string }[]> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('start_time, end_time')
+    .eq('user_id', userId)
+    .eq('task_date', date)
+    .neq('id', excludeTaskId)
+    .not('start_time', 'is', null)
+    .not('end_time', 'is', null)
+    .order('start_time', { ascending: true })
+
+  if (error) throw new Error(error.message)
+
+  return ((data ?? []) as DayTaskRow[]).map((t) => ({
+    start_time: t.start_time as string,
+    end_time: t.end_time as string,
+  }))
+}
+
+function overlapsAny(
+  tasks: { start_time: string; end_time: string }[],
+  start: number,
+  end: number
+): boolean {
+  return tasks.some((t) => {
+    const tStart = timeToMinutes(t.start_time)
+    const tEnd = timeToMinutes(t.end_time)
+    return tStart < end && tEnd > start
+  })
+}
+
+/** searchStart'tan itibaren ilk yeterli buyuklukteki bosluk (mevcut "bosluk ara" algoritmasi). */
+function firstFit(
+  tasks: { start_time: string; end_time: string }[],
+  duration: number,
+  searchStart: number
+): Slot | null {
+  let freeStart = searchStart
+
+  for (const t of tasks) {
+    const tStart = timeToMinutes(t.start_time)
+    const tEnd = timeToMinutes(t.end_time)
+
+    if (tEnd <= freeStart) continue // bu gorev geride kaldi
+
+    if (tStart > freeStart) {
+      if (tStart - freeStart >= duration) {
+        return { start: freeStart, end: freeStart + duration }
+      }
+      freeStart = tEnd
+    } else {
+      freeStart = Math.max(freeStart, tEnd)
+    }
+  }
+
+  if (freeStart + duration <= END_OF_DAY) {
+    return { start: freeStart, end: freeStart + duration }
+  }
+
+  return null
+}
+
+/**
+ * Ortak slot arama yardimcisi: once gorevin ORIJINAL start_time'inin
+ * [searchStart, END_OF_DAY] araliginda olup olmadigina ve bos olup olmadigina bakar
+ * (varsa tercih edilir), yoksa searchStart'tan itibaren ilk yeterli bosluk aranir.
+ */
+async function findSlot(
+  supabase: SupabaseServerClient,
+  userId: string,
+  date: string,
+  duration: number,
+  searchStart: number,
+  excludeTaskId: string,
+  preferredStart: number | null
+): Promise<Slot | null> {
+  const tasks = await fetchDayTasks(supabase, userId, date, excludeTaskId)
+
+  if (
+    preferredStart !== null &&
+    preferredStart >= searchStart &&
+    preferredStart + duration <= END_OF_DAY &&
+    !overlapsAny(tasks, preferredStart, preferredStart + duration)
+  ) {
+    return { start: preferredStart, end: preferredStart + duration }
+  }
+
+  return firstFit(tasks, duration, searchStart)
+}
+
+/** O gundeki en buyuk bosluk (en az minDuration) — bolme icin part1 slotunu bulmakta kullanilir. */
+async function findLargestGap(
+  supabase: SupabaseServerClient,
+  userId: string,
+  date: string,
+  minDuration: number,
+  searchStart: number,
+  excludeTaskId: string
+): Promise<Slot | null> {
+  const tasks = await fetchDayTasks(supabase, userId, date, excludeTaskId)
+
+  let best: Slot | null = null
+  let freeStart = searchStart
+
+  const consider = (start: number, end: number) => {
+    if (end - start >= minDuration && (!best || end - start > best.end - best.start)) {
+      best = { start, end }
+    }
+  }
+
+  for (const t of tasks) {
+    const tStart = timeToMinutes(t.start_time)
+    const tEnd = timeToMinutes(t.end_time)
+
+    if (tEnd <= freeStart) continue
+
+    if (tStart > freeStart) consider(freeStart, tStart)
+    freeStart = Math.max(freeStart, tEnd)
+  }
+  consider(freeStart, END_OF_DAY)
+
+  return best
 }
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus) {
@@ -39,6 +206,16 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
   revalidatePath('/dashboard')
 }
 
+/**
+ * Görev erteleme algoritması — 3 kademeli arama:
+ *  1. Aynı gün içinde (şu andan itibaren) boş slot ara.
+ *  2. Ertesi gün boş slot ara.
+ *  3. Ertesi günde tam sığmıyorsa ve görev esnekse (flexibility_score >= 4),
+ *     görevi ikiye bölmeyi dene: 1. parça ertesi güne, 2. parça yarın-sonrasına.
+ *  4. Bölme mümkün değilse veya başarısız olursa, en yakın uygun günü ara
+ *     (yarın-sonrasından başlayarak 14 gün ileriye kadar, bölmeden).
+ *  5. Hiçbiri olmazsa görev iptal edilir.
+ */
 export async function rescheduleTask(taskId: string) {
   const supabase = await createClient()
 
@@ -62,132 +239,156 @@ export async function rescheduleTask(taskId: string) {
       throw new Error('Sabit görevler ertelenemez')
     }
 
-    // 3. Yarınki tarih
-    const tomorrowStr = addOneDay(task.task_date)
-
-    // 4. Saat bilgisi olmayan görev → sadece tarih + status güncelle
+    // 3. Saat bilgisi olmayan görev → çakışma söz konusu olamaz, doğrudan ertesi güne taşı
     if (task.start_time === null || task.end_time === null) {
       const { error } = await supabase
         .from('tasks')
-        .update({ task_date: tomorrowStr, status: 'rescheduled' })
+        .update({ task_date: addOneDay(task.task_date), status: 'rescheduled' })
         .eq('id', taskId)
       if (error) throw new Error(error.message)
       revalidatePath('/dashboard')
       return
     }
 
-    // 5. Görevin süresi (dakika)
     const duration = timeToMinutes(task.end_time) - timeToMinutes(task.start_time)
-    const targetStart = timeToMinutes(task.start_time)
-    const targetEnd = targetStart + duration
+    const originalStart = timeToMinutes(task.start_time)
+    const canSplit = task.flexibility_score >= 4
 
-    // 6. Yarının görevlerini saat sırasına göre çek
-    const { data: tomorrowTasks, error: tomorrowError } = await supabase
-      .from('tasks')
-      .select('start_time, end_time')
-      .eq('user_id', task.user_id)
-      .eq('task_date', tomorrowStr)
-      .not('start_time', 'is', null)
-      .not('end_time', 'is', null)
-      .order('start_time', { ascending: true })
-
-    if (tomorrowError) throw new Error(tomorrowError.message)
-
-    const tomorrow = tomorrowTasks ?? []
-
-    // 7. Orijinal saatte çakışma var mı?
-    const hasOverlap = tomorrow.some((t) => {
-      const tStart = timeToMinutes(t.start_time!)
-      const tEnd = timeToMinutes(t.end_time!)
-      return tStart < targetEnd && tEnd > targetStart
-    })
-
-    // Varsayılan: orijinal saat (çakışma yoksa burası kullanılır)
-    let candidateStart = targetStart
-    let candidateEnd = targetEnd
-
-    if (hasOverlap) {
-      // İlk uygun boşluğu targetStart'tan itibaren ara
-      let freeStart = targetStart
-
-      let placed = false
-      for (const t of tomorrow) {
-        const tStart = timeToMinutes(t.start_time!)
-        const tEnd = timeToMinutes(t.end_time!)
-
-        if (tEnd <= freeStart) continue // bu görev geride kaldı
-
-        if (tStart > freeStart) {
-          // Aradaki boşluk yeterli mi?
-          if (tStart - freeStart >= duration) {
-            candidateStart = freeStart
-            candidateEnd = freeStart + duration
-            placed = true
-            break
-          } else {
-            freeStart = tEnd
-          }
-        } else {
-          // Görev freeStart ile örtüşüyor
-          freeStart = Math.max(freeStart, tEnd)
-        }
-      }
-
-      if (!placed) {
-        // Tüm görevlerin ardına yerleştir
-        candidateStart = freeStart
-        candidateEnd = freeStart + duration
-      }
-    }
-
-    // 8. Yerleşim kararı
-    let newStartTime: string
-    let newEndTime: string
-    let newStatus: TaskStatus
-
-    if (candidateEnd <= END_OF_DAY) {
-      newStartTime = minutesToTime(candidateStart)
-      newEndTime = minutesToTime(candidateEnd)
-      newStatus = 'rescheduled'
-    } else if (task.flexibility_score >= 4) {
-      const available = END_OF_DAY - candidateStart
-      if (available >= MIN_DURATION) {
-        // Tıraşla
-        newStartTime = minutesToTime(candidateStart)
-        newEndTime = minutesToTime(END_OF_DAY)
-        newStatus = 'rescheduled'
-      } else {
-        const { error } = await supabase
-          .from('tasks')
-          .update({ status: 'cancelled' })
-          .eq('id', taskId)
-        if (error) throw new Error(error.message)
-        revalidatePath('/dashboard')
-        return
-      }
-    } else {
+    async function commitMove(date: string, slot: Slot): Promise<void> {
       const { error } = await supabase
         .from('tasks')
-        .update({ status: 'cancelled' })
+        .update({
+          task_date: date,
+          start_time: minutesToTime(slot.start),
+          end_time: minutesToTime(slot.end),
+          status: 'rescheduled',
+        })
         .eq('id', taskId)
       if (error) throw new Error(error.message)
       revalidatePath('/dashboard')
+    }
+
+    // ADIM 1 — Aynı gün
+    const { dateStr: todayStr, minutes: nowMinutes } = nowIstanbul()
+    const sameDaySearchStart = task.task_date === todayStr ? nowMinutes : 0
+
+    const sameDaySlot = await findSlot(
+      supabase,
+      task.user_id,
+      task.task_date,
+      duration,
+      sameDaySearchStart,
+      taskId,
+      null // orijinal slot burada tercih edilmemeli — aynı gün içinde erteleme, aynı slota "no-op" düşmesin
+    )
+    if (sameDaySlot) {
+      await commitMove(task.task_date, sameDaySlot)
       return
     }
 
-    // 9. Güncelle
-    const { error: updateError } = await supabase
+    // ADIM 2 — Ertesi gün
+    const nextDay = addOneDay(task.task_date)
+    const nextDaySlot = await findSlot(supabase, task.user_id, nextDay, duration, 0, taskId, originalStart)
+    if (nextDaySlot) {
+      await commitMove(nextDay, nextDaySlot)
+      return
+    }
+
+    const dayAfter = addOneDay(nextDay)
+
+    // Bölme ihtimali — sadece görev yeterince esnekse ve süresi bölünmeye uygunsa
+    if (canSplit && duration > MIN_DURATION) {
+      const gap = await findLargestGap(supabase, task.user_id, nextDay, MIN_DURATION, 0, taskId)
+
+      if (gap) {
+        const gapSize = gap.end - gap.start
+        const part1Duration = Math.min(gapSize, duration - MIN_DURATION)
+        const part2Duration = duration - part1Duration
+
+        const slot2 = await findSlot(
+          supabase,
+          task.user_id,
+          dayAfter,
+          part2Duration,
+          0,
+          taskId,
+          originalStart
+        )
+
+        if (slot2) {
+          const part1Slot: Slot = { start: gap.start, end: gap.start + part1Duration }
+
+          // Mevcut görevi 1. parça olarak güncelle
+          const { error: updateError } = await supabase
+            .from('tasks')
+            .update({
+              task_date: nextDay,
+              start_time: minutesToTime(part1Slot.start),
+              end_time: minutesToTime(part1Slot.end),
+              status: 'rescheduled',
+              title: `${task.title} (1/2)`,
+            })
+            .eq('id', taskId)
+          if (updateError) throw new Error(updateError.message)
+
+          // 2. parçayı yeni bir satır olarak ekle
+          const { data: inserted, error: insertError } = await supabase
+            .from('tasks')
+            .insert({
+              user_id: task.user_id,
+              skeleton_block_id: task.skeleton_block_id,
+              title: `${task.title} (2/2)`,
+              description: task.description,
+              energy_cost: task.energy_cost,
+              flexibility_score: task.flexibility_score,
+              // original_date trigger tarafından task_date'e eşitlenip aşağıda düzeltilecek;
+              // burada yalnızca NOT NULL kısıtını + Insert tipini karşılamak için veriliyor.
+              original_date: dayAfter,
+              task_date: dayAfter,
+              start_time: minutesToTime(slot2.start),
+              end_time: minutesToTime(slot2.end),
+              status: 'rescheduled',
+              linked_task_id: taskId,
+            })
+            .select('id')
+            .single()
+
+          if (insertError) throw new Error(insertError.message)
+
+          // set_task_original_date trigger'ı INSERT'te original_date'i task_date'e (dayAfter)
+          // eşitledi — bölünen görevin GERÇEK ilk tarihini (original_date) korumak için düzelt,
+          // aksi halde arşiv sayfasındaki gün gruplaması bozulur.
+          if (inserted) {
+            const { error: fixError } = await supabase
+              .from('tasks')
+              .update({ original_date: task.original_date })
+              .eq('id', inserted.id)
+            if (fixError) throw new Error(fixError.message)
+          }
+
+          revalidatePath('/dashboard')
+          return
+        }
+        // slot2 bulunamadı → bölmeyi iptal et, ADIM 3'e düş
+      }
+    }
+
+    // ADIM 3 — En yakın uygun gün (bölmeden), dayAfter'dan başlayarak task.task_date + 14 güne kadar
+    for (let offset = 2; offset <= MAX_SEARCH_DAYS; offset++) {
+      const day = addDays(task.task_date, offset)
+      const slot = await findSlot(supabase, task.user_id, day, duration, 0, taskId, originalStart)
+      if (slot) {
+        await commitMove(day, slot)
+        return
+      }
+    }
+
+    // ADIM 4 — Hiçbiri olmadı
+    const { error } = await supabase
       .from('tasks')
-      .update({
-        task_date: tomorrowStr,
-        start_time: newStartTime,
-        end_time: newEndTime,
-        status: newStatus,
-      })
+      .update({ status: 'cancelled' })
       .eq('id', taskId)
-
-    if (updateError) throw new Error(updateError.message)
-
+    if (error) throw new Error(error.message)
     revalidatePath('/dashboard')
   } catch (err) {
     if (err instanceof Error) throw err

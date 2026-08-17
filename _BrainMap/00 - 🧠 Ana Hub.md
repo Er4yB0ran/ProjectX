@@ -18,6 +18,10 @@
 | 07 | [[07 - 🎨 Tasarım Sistemi]] | Renkler, tipografi, animasyonlar |
 | 08 | [[08 - 🤖 AI Entegrasyonu]] | Claude Haiku entegrasyonu |
 | 09 | [[09 - 📁 Dosya Haritası]] | Tam dosya yapısı ve sorumluluklar |
+| 10 | [[10 - 🚦 Şu An Neredeyiz (Web Dönemi)]] | Faz durumu, "şu an ne var" görsel özeti |
+| 11 | [[11 - 🔥 Grilling - İskelet Chat Düzenleme]] | Onboarding AI-sohbet özelliği için mimari mülakat |
+| 12 | [[12 - ⏳ Ertelenmiş Kararlar]] | "Şimdilik A, ileride B" türü bilinçli ertelenmiş kararlar |
+| 13 | [[13 - 🔥 Grilling - Takvim Entegrasyonu]] | Google Calendar pull entegrasyonu için mimari mülakat |
 
 ---
 

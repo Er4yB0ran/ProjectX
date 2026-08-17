@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import SkeletonChatEditor from './SkeletonChatEditor'
+import type { DraftBlock } from './skeletonChatTypes'
 
 type EnergyPeak = 'Sabah' | 'Öğle' | 'İkindi' | 'Akşam' | 'Gece'
 
@@ -57,13 +59,20 @@ const INITIAL_STATE: OnboardingFormState = {
 
 const INITIAL_BLOCK: FixedBlock = { title: '', startTime: '09:00', endTime: '17:00' }
 
-export default function OnboardingForm() {
+interface OnboardingFormProps {
+  aiChatEnabled: boolean
+}
+
+export default function OnboardingForm({ aiChatEnabled }: OnboardingFormProps) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<OnboardingFormState>(INITIAL_STATE)
   const [newBlock, setNewBlock] = useState<FixedBlock>(INITIAL_BLOCK)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [phase, setPhase] = useState<'form' | 'review'>('form')
+  const [blocks, setBlocks] = useState<DraftBlock[]>([])
+  const [committing, setCommitting] = useState(false)
 
   function updateField<K extends keyof OnboardingFormState>(key: K, value: OnboardingFormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -96,25 +105,68 @@ export default function OnboardingForm() {
     updateField('freeDays', days)
   }
 
+  async function commitBlocks(blocksToCommit: DraftBlock[]) {
+    const res = await fetch('/api/onboarding/commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        blocks: blocksToCommit.map(({ client_id: _client_id, ...rest }) => rest),
+        weekdayWakeUp: form.weekdayWakeUp,
+        weekdaySleep: form.weekdaySleep,
+        energyPeaks: form.energyPeaks,
+      }),
+    })
+    if (res.ok) {
+      router.push('/dashboard')
+      return true
+    }
+    const data = await res.json()
+    setError(data.error ?? 'Bir hata oluştu, lütfen tekrar deneyin.')
+    return false
+  }
+
   async function handleSubmit() {
     setError(null)
     setSubmitting(true)
     try {
-      const res = await fetch('/api/onboarding', {
+      const res = await fetch('/api/onboarding/generate-skeleton', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (res.ok) {
-        router.push('/dashboard')
-      } else {
+      if (!res.ok) {
         const data = await res.json()
         setError(data.error ?? 'Bir hata oluştu, lütfen tekrar deneyin.')
+        return
+      }
+      const data: { blocks: Omit<DraftBlock, 'client_id'>[] } = await res.json()
+      const draftBlocks: DraftBlock[] = data.blocks.map((b) => ({
+        ...b,
+        client_id: crypto.randomUUID(),
+      }))
+
+      if (aiChatEnabled) {
+        setBlocks(draftBlocks)
+        setPhase('review')
+      } else {
+        await commitBlocks(draftBlocks)
       }
     } catch {
       setError('Bağlantı hatası, lütfen tekrar deneyin.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleContinue(finalBlocks: DraftBlock[]) {
+    setError(null)
+    setCommitting(true)
+    try {
+      await commitBlocks(finalBlocks)
+    } catch {
+      setError('Bağlantı hatası, lütfen tekrar deneyin.')
+    } finally {
+      setCommitting(false)
     }
   }
 
@@ -130,6 +182,17 @@ export default function OnboardingForm() {
     'bg-violet-600/20 border-violet-500/45 text-violet-200 shadow-[0_0_14px_rgba(139,92,246,0.18)]'
   const pillInactive =
     'bg-[#0e0e16] border-[#25253a] text-white/40 hover:bg-[#14141e] hover:text-white/65 hover:border-[#363650]'
+
+  if (phase === 'review') {
+    return (
+      <SkeletonChatEditor
+        initialBlocks={blocks}
+        committing={committing}
+        error={error}
+        onContinue={handleContinue}
+      />
+    )
+  }
 
   return (
     <div

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import TaskCard from './TaskCard'
 import CloseDay from './CloseDay'
+import AddTaskButton from './AddTaskButton'
 
 function getTodayIstanbul(): { dateStr: string; dbDayOfWeek: number } {
   const dateStr = new Intl.DateTimeFormat('sv', { timeZone: 'Europe/Istanbul' }).format(new Date())
@@ -84,28 +85,35 @@ export default async function DashboardPage() {
   const displayDate = formatDisplayDate(dateStr)
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-white capitalize tracking-tight">{displayDate}</h2>
-        <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
+      <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-semibold text-white capitalize tracking-tight">{displayDate}</h2>
+          <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
+        </div>
+
+        {/* Stats */}
+        <div className="flex gap-3">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 min-w-[7rem]">
+            <p className="text-2xl font-semibold text-white tabular-nums">{pending.length}</p>
+            <p className="text-xs text-neutral-400 mt-0.5">Bekleyen gorev</p>
+          </div>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 min-w-[7rem]">
+            <p className="text-2xl font-semibold text-green-400 tabular-nums">{completed.length}</p>
+            <p className="text-xs text-neutral-400 mt-0.5">Tamamlanan</p>
+          </div>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
-          <p className="text-2xl font-semibold text-white tabular-nums">{pending.length}</p>
-          <p className="text-xs text-neutral-400 mt-0.5">Bekleyen gorev</p>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
-          <p className="text-2xl font-semibold text-green-400 tabular-nums">{completed.length}</p>
-          <p className="text-xs text-neutral-400 mt-0.5">Tamamlanan</p>
-        </div>
+      {/* Add task */}
+      <div className="mb-4 flex justify-end">
+        <AddTaskButton dateStr={dateStr} />
       </div>
 
       {/* Task list */}
       {allTasks.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {allTasks.map((task) => (
             <li key={task.id}>
               <TaskCard
